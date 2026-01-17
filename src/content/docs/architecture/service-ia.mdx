@@ -1,0 +1,418 @@
+---
+title: Service Intelligence Artificielle
+description: Architecture et fonctionnement du service IA de Mindlet
+sidebar:
+  order: 4
+---
+
+import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+# 🤖 Service Intelligence Artificielle
+
+<Badge text="LangChain" variant="success" />
+<Badge text="LangGraph" variant="note" />
+<Badge text="Qdrant" variant="caution" />
+
+## Vue d'ensemble
+
+Le service IA est le cœur de Mindlet, responsable de la **génération automatique de contenu pédagogique** à partir de documents importés par les utilisateurs.
+
+<Aside type="note">
+  Notre technologie d'IA propriétaire est capable d'analyser, comprendre et transformer n'importe quel contenu en outils d'apprentissage interactifs.
+</Aside>
+
+## Stack technique
+
+| Composant | Technologie | Rôle |
+|-----------|-------------|------|
+| **Orchestration** | LangChain | Chaînes de traitement LLM |
+| **Agents** | LangGraph | Graphes d'agents intelligents |
+| **Embeddings** | OpenAI / Ollama | Vectorisation des contenus |
+| **Base vectorielle** | Qdrant | Stockage et recherche sémantique |
+| **LLM** | GPT-4 / Claude / Mistral | Génération de texte |
+
+## Architecture du service
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SERVICE IA                                │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Document   │  │   Content    │  │   Question   │      │
+│  │   Ingestion  │──│   Analysis   │──│   Generation │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│         │                │                  │               │
+│         ▼                ▼                  ▼               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Embedding  │  │   Semantic   │  │   Card       │      │
+│  │   Service    │  │   Search     │  │   Builder    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│         │                │                  │               │
+│         └────────────────┼──────────────────┘               │
+│                          ▼                                  │
+│                   ┌──────────────┐                         │
+│                   │    Qdrant    │                         │
+│                   │   Vector DB  │                         │
+│                   └──────────────┘                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Pipeline de traitement
+
+<Steps>
+1. **Ingestion du document**
+   - Extraction du texte (PDF, DOCX, PPTX, audio, vidéo)
+   - Nettoyage et normalisation
+   - Découpage en chunks
+
+2. **Analyse du contenu**
+   - Identification des concepts clés
+   - Extraction des définitions
+   - Détection de la structure
+
+3. **Vectorisation**
+   - Génération des embeddings
+   - Stockage dans Qdrant
+   - Indexation pour la recherche
+
+4. **Génération des questions**
+   - Création de questions variées
+   - Validation de la pertinence
+   - Formatage selon le type de carte
+
+5. **Construction des cartes**
+   - Assemblage question/réponse
+   - Ajout des métadonnées
+   - Classification par difficulté
+</Steps>
+
+## Chaînes LangChain
+
+### Document Processing Chain
+
+```python
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+
+document_analysis_prompt = PromptTemplate(
+    input_variables=["content"],
+    template="""
+    Analysez le contenu suivant et extrayez:
+    1. Les concepts clés (5-10 maximum)
+    2. Les définitions importantes
+    3. Les relations entre concepts
+    4. Les points difficiles à mémoriser
+    
+    Contenu:
+    {content}
+    
+    Répondez en JSON structuré.
+    """
+)
+
+analysis_chain = LLMChain(
+    llm=llm,
+    prompt=document_analysis_prompt,
+    output_parser=JsonOutputParser()
+)
+```
+
+### Question Generation Chain
+
+```python
+question_generation_prompt = PromptTemplate(
+    input_variables=["concept", "context", "difficulty"],
+    template="""
+    Génère une question pédagogique sur le concept suivant:
+    
+    Concept: {concept}
+    Contexte: {context}
+    Difficulté: {difficulty}
+    
+    La question doit:
+    - Être claire et non ambiguë
+    - Tester la compréhension, pas la mémorisation brute
+    - Avoir une réponse vérifiable
+    
+    Format de sortie:
+    {{
+        "question": "...",
+        "answer": "...",
+        "explanation": "...",
+        "difficulty": 1-5
+    }}
+    """
+)
+```
+
+## Agents LangGraph
+
+### Agent de génération adaptative
+
+<Tabs>
+  <TabItem label="Architecture">
+    ```python
+    from langgraph.graph import StateGraph, END
+
+    class GenerationState(TypedDict):
+        document: str
+        concepts: List[str]
+        questions: List[Dict]
+        cards: List[Card]
+        quality_score: float
+
+    def create_generation_graph():
+        workflow = StateGraph(GenerationState)
+        
+        # Nœuds du graphe
+        workflow.add_node("extract_concepts", extract_concepts)
+        workflow.add_node("generate_questions", generate_questions)
+        workflow.add_node("validate_quality", validate_quality)
+        workflow.add_node("build_cards", build_cards)
+        workflow.add_node("regenerate", regenerate_low_quality)
+        
+        # Transitions
+        workflow.add_edge("extract_concepts", "generate_questions")
+        workflow.add_conditional_edges(
+            "generate_questions",
+            check_quality,
+            {
+                "pass": "build_cards",
+                "fail": "regenerate"
+            }
+        )
+        workflow.add_edge("regenerate", "validate_quality")
+        workflow.add_edge("build_cards", END)
+        
+        return workflow.compile()
+    ```
+  </TabItem>
+  
+  <TabItem label="Validation qualité">
+    ```python
+    def validate_quality(state: GenerationState) -> GenerationState:
+        """Évalue la qualité des questions générées."""
+        
+        quality_prompt = """
+        Évaluez la qualité de cette question pédagogique:
+        
+        Question: {question}
+        Réponse: {answer}
+        
+        Critères (0-1 chacun):
+        - Clarté
+        - Pertinence pédagogique
+        - Vérifiabilité de la réponse
+        - Niveau de difficulté approprié
+        
+        Score global (moyenne des critères):
+        """
+        
+        scores = []
+        for q in state["questions"]:
+            score = evaluate_question(q, quality_prompt)
+            scores.append(score)
+        
+        state["quality_score"] = sum(scores) / len(scores)
+        return state
+
+    def check_quality(state: GenerationState) -> str:
+        """Décide si la qualité est suffisante."""
+        if state["quality_score"] >= 0.7:
+            return "pass"
+        return "fail"
+    ```
+  </TabItem>
+</Tabs>
+
+## Embeddings et recherche sémantique
+
+### Configuration Qdrant
+
+```python
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
+
+client = QdrantClient(host="qdrant", port=6333)
+
+# Création de la collection
+client.create_collection(
+    collection_name="mindlet_documents",
+    vectors_config=VectorParams(
+        size=1536,  # Dimension OpenAI
+        distance=Distance.COSINE
+    )
+)
+```
+
+### Service d'embedding
+
+```python
+class EmbeddingService:
+    def __init__(self, model: str = "text-embedding-3-small"):
+        self.model = model
+        self.client = OpenAI()
+    
+    async def embed_document(self, document: Document) -> List[float]:
+        """Génère l'embedding d'un document."""
+        chunks = self.chunk_document(document.content)
+        embeddings = []
+        
+        for chunk in chunks:
+            response = await self.client.embeddings.create(
+                model=self.model,
+                input=chunk
+            )
+            embeddings.append({
+                "vector": response.data[0].embedding,
+                "metadata": {
+                    "document_id": document.id,
+                    "chunk_index": chunks.index(chunk),
+                    "text": chunk
+                }
+            })
+        
+        return embeddings
+    
+    async def search_similar(
+        self, 
+        query: str, 
+        limit: int = 5
+    ) -> List[Dict]:
+        """Recherche les contenus similaires."""
+        query_embedding = await self.embed_text(query)
+        
+        results = self.qdrant.search(
+            collection_name="mindlet_documents",
+            query_vector=query_embedding,
+            limit=limit
+        )
+        
+        return [
+            {
+                "text": hit.payload["text"],
+                "score": hit.score,
+                "document_id": hit.payload["document_id"]
+            }
+            for hit in results
+        ]
+```
+
+## Types de cartes générées
+
+<CardGrid>
+  <Card title="Flashcard" icon="document">
+    Question/réponse simple pour la mémorisation
+  </Card>
+  <Card title="QCM" icon="list-format">
+    Question à choix multiples avec distracteurs
+  </Card>
+  <Card title="Vrai/Faux" icon="approve-check">
+    Affirmation à valider avec explication
+  </Card>
+  <Card title="Association" icon="puzzle">
+    Relier des éléments correspondants
+  </Card>
+  <Card title="Texte à trous" icon="pencil">
+    Compléter les mots manquants
+  </Card>
+  <Card title="Carte mentale" icon="star">
+    Visualisation des relations entre concepts
+  </Card>
+</CardGrid>
+
+### Génération de QCM
+
+```python
+def generate_mcq(concept: str, context: str) -> Dict:
+    """Génère un QCM avec distracteurs pertinents."""
+    
+    prompt = f"""
+    Créez un QCM sur: {concept}
+    Contexte: {context}
+    
+    Générez:
+    - 1 bonne réponse
+    - 3 distracteurs plausibles mais incorrects
+    
+    Les distracteurs doivent:
+    - Être vraisemblables
+    - Cibler des erreurs de compréhension courantes
+    - Ne pas être trivialement faux
+    """
+    
+    response = llm.generate(prompt)
+    
+    return {
+        "type": "mcq",
+        "question": response.question,
+        "correct_answer": response.correct,
+        "options": shuffle([
+            response.correct,
+            *response.distractors
+        ]),
+        "explanation": response.explanation
+    }
+```
+
+## Performance et optimisation
+
+### Caching
+
+```python
+from functools import lru_cache
+import redis
+
+redis_client = redis.Redis(host='redis', port=6379)
+
+def cache_embedding(func):
+    """Decorator pour cacher les embeddings."""
+    async def wrapper(text: str) -> List[float]:
+        cache_key = f"embedding:{hash(text)}"
+        
+        cached = redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+        
+        embedding = await func(text)
+        redis_client.setex(cache_key, 3600, json.dumps(embedding))
+        
+        return embedding
+    return wrapper
+```
+
+### Batch processing
+
+```python
+async def process_batch(documents: List[Document]) -> List[Card]:
+    """Traite plusieurs documents en parallèle."""
+    
+    tasks = [
+        asyncio.create_task(process_document(doc))
+        for doc in documents
+    ]
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    cards = []
+    for result in results:
+        if isinstance(result, Exception):
+            logger.error(f"Error processing document: {result}")
+        else:
+            cards.extend(result)
+    
+    return cards
+```
+
+## Métriques et monitoring
+
+| Métrique | Description | Cible |
+|----------|-------------|-------|
+| **Latence génération** | Temps pour générer des cartes | < 10s |
+| **Qualité questions** | Score moyen de validation | > 0.7 |
+| **Taux de succès** | Documents traités sans erreur | > 95% |
+| **Utilisation cache** | Hit rate du cache embeddings | > 60% |
+
+---
+
+*Intelligence artificielle au service de l'apprentissage personnalisé.*

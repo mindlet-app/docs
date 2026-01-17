@@ -1,0 +1,528 @@
+---
+title: Tests et qualité
+description: Stratégie de tests et assurance qualité
+sidebar:
+  order: 3
+---
+
+import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+# ✅ Tests et qualité
+
+<Badge text="400+ tests" variant="success" size="large" />
+<Badge text="85% couverture" variant="note" size="large" />
+
+## Philosophie de test
+
+<Aside type="note">
+  Suite à l'échec de notre lancement beta, nous avons complètement revu notre approche des tests. **La qualité avant la quantité de fonctionnalités**.
+</Aside>
+
+Notre stratégie de tests repose sur la pyramide des tests :
+
+```
+           /\
+          /  \      Tests E2E (10%)
+         /----\     Scénarios utilisateur complets
+        /      \
+       /--------\   Tests d'intégration (20%)
+      /          \  Communication entre composants
+     /------------\
+    /              \ Tests unitaires (70%)
+   /----------------\ Fonctions et classes isolées
+```
+
+## Tests Backend (Laravel)
+
+### Suite de tests
+
+| Type | Nombre | Couverture |
+|------|--------|------------|
+| **Tests unitaires** | 250+ | 85% |
+| **Tests de feature** | 150+ | 90% |
+| **Tests d'intégration** | 50+ | - |
+| **Total** | 400+ | - |
+
+### Configuration PHPUnit
+
+```xml
+<!-- phpunit.xml -->
+<phpunit>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">app</directory>
+        </include>
+        <exclude>
+            <directory>app/Console</directory>
+        </exclude>
+    </coverage>
+</phpunit>
+```
+
+### Exemples de tests
+
+<Tabs>
+  <TabItem label="Test unitaire">
+    ```php
+    class CardServiceTest extends TestCase
+    {
+        private CardService $service;
+        private MockObject $repository;
+        
+        protected function setUp(): void
+        {
+            parent::setUp();
+            
+            $this->repository = $this->createMock(CardRepositoryInterface::class);
+            $this->service = new CardService($this->repository);
+        }
+        
+        public function test_it_validates_card_type(): void
+        {
+            $this->expectException(InvalidCardTypeException::class);
+            
+            $this->service->create([
+                'type' => 'invalid_type',
+                'question' => 'Test',
+                'answer' => 'Answer',
+            ]);
+        }
+        
+        public function test_it_calculates_difficulty_correctly(): void
+        {
+            $card = new Card([
+                'question' => 'Simple question',
+                'answer' => 'Short',
+            ]);
+            
+            $difficulty = $this->service->calculateDifficulty($card);
+            
+            $this->assertEquals(1, $difficulty);
+        }
+    }
+    ```
+  </TabItem>
+  
+  <TabItem label="Test de feature">
+    ```php
+    class CardControllerTest extends TestCase
+    {
+        use RefreshDatabase;
+        
+        public function test_user_can_create_flashcard(): void
+        {
+            $user = User::factory()->create();
+            $collection = Collection::factory()->for($user)->create();
+            
+            $response = $this->actingAs($user)
+                ->postJson('/api/v1/cards', [
+                    'collection_id' => $collection->id,
+                    'type' => 'flashcard',
+                    'question' => 'What is PHP?',
+                    'answer' => 'A programming language',
+                ]);
+            
+            $response
+                ->assertStatus(201)
+                ->assertJsonStructure([
+                    'data' => [
+                        'id',
+                        'type',
+                        'question',
+                        'answer',
+                        'created_at',
+                    ]
+                ]);
+            
+            $this->assertDatabaseHas('cards', [
+                'question' => 'What is PHP?',
+                'user_id' => $user->id,
+            ]);
+        }
+        
+        public function test_user_cannot_access_others_cards(): void
+        {
+            $user = User::factory()->create();
+            $otherUser = User::factory()->create();
+            $card = Card::factory()->for($otherUser)->create();
+            
+            $response = $this->actingAs($user)
+                ->getJson("/api/v1/cards/{$card->id}");
+            
+            $response->assertStatus(403);
+        }
+        
+        public function test_validation_fails_with_empty_question(): void
+        {
+            $user = User::factory()->create();
+            $collection = Collection::factory()->for($user)->create();
+            
+            $response = $this->actingAs($user)
+                ->postJson('/api/v1/cards', [
+                    'collection_id' => $collection->id,
+                    'type' => 'flashcard',
+                    'question' => '',
+                    'answer' => 'Answer',
+                ]);
+            
+            $response
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['question']);
+        }
+    }
+    ```
+  </TabItem>
+  
+  <TabItem label="Test d'intégration">
+    ```php
+    class CardGenerationIntegrationTest extends TestCase
+    {
+        use RefreshDatabase;
+        
+        public function test_full_card_generation_flow(): void
+        {
+            // Arrange
+            $user = User::factory()->create();
+            $document = Document::factory()
+                ->for($user)
+                ->create([
+                    'content' => 'PHP is a server-side scripting language...',
+                ]);
+            
+            // Mock du service IA
+            $this->mock(AIService::class, function ($mock) {
+                $mock->shouldReceive('generateQuestions')
+                    ->once()
+                    ->andReturn([
+                        [
+                            'question' => 'What is PHP?',
+                            'answer' => 'A server-side scripting language',
+                            'type' => 'flashcard',
+                        ],
+                    ]);
+            });
+            
+            // Act
+            $response = $this->actingAs($user)
+                ->postJson('/api/v1/cards/generate', [
+                    'document_id' => $document->id,
+                ]);
+            
+            // Assert
+            $response->assertStatus(200);
+            $this->assertDatabaseHas('cards', [
+                'question' => 'What is PHP?',
+                'document_id' => $document->id,
+            ]);
+        }
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+### Factories et Seeders
+
+```php
+class CardFactory extends Factory
+{
+    public function definition(): array
+    {
+        return [
+            'user_id' => User::factory(),
+            'collection_id' => Collection::factory(),
+            'type' => $this->faker->randomElement([
+                'flashcard', 'mcq', 'truefalse'
+            ]),
+            'question' => $this->faker->sentence() . '?',
+            'answer' => $this->faker->paragraph(),
+            'options' => null,
+            'metadata' => [],
+        ];
+    }
+    
+    public function mcq(): static
+    {
+        return $this->state(fn () => [
+            'type' => 'mcq',
+            'options' => [
+                ['text' => 'Option A', 'correct' => true],
+                ['text' => 'Option B', 'correct' => false],
+                ['text' => 'Option C', 'correct' => false],
+                ['text' => 'Option D', 'correct' => false],
+            ],
+        ]);
+    }
+}
+```
+
+## Tests Frontend (React Native)
+
+### Stack de test
+
+| Outil | Usage |
+|-------|-------|
+| **Jest** | Test runner |
+| **React Native Testing Library** | Tests de composants |
+| **MSW** | Mock des requêtes API |
+
+### Tests de composants
+
+```tsx
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Flashcard } from '@/components/cards/Flashcard';
+
+describe('Flashcard', () => {
+  it('should display question initially', () => {
+    const { getByText } = render(
+      <Flashcard 
+        question="What is React?" 
+        answer="A JavaScript library" 
+      />
+    );
+    
+    expect(getByText('What is React?')).toBeTruthy();
+  });
+  
+  it('should flip and show answer on press', async () => {
+    const { getByText, getByTestId } = render(
+      <Flashcard 
+        question="What is React?" 
+        answer="A JavaScript library" 
+      />
+    );
+    
+    fireEvent.press(getByTestId('flashcard'));
+    
+    await waitFor(() => {
+      expect(getByText('A JavaScript library')).toBeTruthy();
+    });
+  });
+  
+  it('should be accessible', () => {
+    const { getByA11yLabel } = render(
+      <Flashcard 
+        question="What is React?" 
+        answer="A JavaScript library" 
+      />
+    );
+    
+    expect(getByA11yLabel('Retourner la carte')).toBeTruthy();
+  });
+});
+```
+
+### Tests de hooks
+
+```tsx
+import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { useCollectionsStore } from '@/stores/collectionsStore';
+
+describe('useCollectionsStore', () => {
+  beforeEach(() => {
+    useCollectionsStore.getState().reset();
+  });
+  
+  it('should fetch collections', async () => {
+    const { result } = renderHook(() => useCollectionsStore());
+    
+    await act(async () => {
+      await result.current.fetchCollections();
+    });
+    
+    expect(result.current.collections).toHaveLength(3);
+    expect(result.current.isLoading).toBe(false);
+  });
+  
+  it('should handle fetch error', async () => {
+    server.use(
+      rest.get('/api/v1/collections', (req, res, ctx) => {
+        return res(ctx.status(500));
+      })
+    );
+    
+    const { result } = renderHook(() => useCollectionsStore());
+    
+    await expect(
+      act(() => result.current.fetchCollections())
+    ).rejects.toThrow();
+  });
+});
+```
+
+## Tests du Service IA
+
+### Tests des chaînes LangChain
+
+```python
+import pytest
+from unittest.mock import Mock, patch
+from services.card_generation import CardGenerationService
+
+class TestCardGenerationService:
+    @pytest.fixture
+    def service(self):
+        return CardGenerationService()
+    
+    @pytest.fixture
+    def mock_llm(self):
+        with patch('services.card_generation.get_llm') as mock:
+            mock.return_value = Mock()
+            yield mock.return_value
+    
+    def test_extract_concepts(self, service, mock_llm):
+        mock_llm.generate.return_value = {
+            "concepts": ["PHP", "Web development", "Server-side"]
+        }
+        
+        content = "PHP is a server-side scripting language..."
+        concepts = service.extract_concepts(content)
+        
+        assert len(concepts) == 3
+        assert "PHP" in concepts
+    
+    def test_generate_question_from_concept(self, service, mock_llm):
+        mock_llm.generate.return_value = {
+            "question": "What is PHP?",
+            "answer": "A programming language",
+            "difficulty": 1
+        }
+        
+        question = service.generate_question(
+            concept="PHP",
+            context="Programming languages"
+        )
+        
+        assert question["question"] == "What is PHP?"
+        assert question["difficulty"] == 1
+    
+    def test_validate_question_quality(self, service):
+        good_question = {
+            "question": "What is the main purpose of PHP?",
+            "answer": "Server-side web scripting",
+            "difficulty": 2
+        }
+        
+        assert service.validate_quality(good_question) > 0.7
+    
+    def test_reject_low_quality_question(self, service):
+        bad_question = {
+            "question": "???",
+            "answer": "ok",
+            "difficulty": 1
+        }
+        
+        assert service.validate_quality(bad_question) < 0.5
+```
+
+## Intégration Continue (CI/CD)
+
+### GitHub Actions
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: testing
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: xdebug
+      
+      - name: Install dependencies
+        run: composer install --no-progress
+      
+      - name: Run tests
+        run: php artisan test --coverage
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_DATABASE: testing
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test -- --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+```
+
+### Règles de merge
+
+<Steps>
+1. Tous les tests doivent passer ✅
+2. Couverture de code ne doit pas diminuer 📊
+3. Code review approuvée par au moins 1 personne 👀
+4. Pas de conflits avec la branche cible 🔀
+</Steps>
+
+## Leçons apprises sur les tests
+
+### Avant le lancement beta
+
+- ❌ Couverture insuffisante (~40%)
+- ❌ Pas de tests d'intégration
+- ❌ Tests manuels uniquement pour le frontend
+- ❌ Pas de CI/CD automatisé
+
+### Après les retours utilisateurs
+
+- ✅ Couverture à 85%+
+- ✅ Tests d'intégration complets
+- ✅ Tests automatisés du frontend
+- ✅ CI/CD sur chaque PR
+
+<Aside type="tip">
+  **Conseil** : Écrire les tests AVANT les fonctionnalités (TDD) permet de concevoir un code plus robuste et maintenable.
+</Aside>
+
+---
+
+*La qualité n'est pas négociable.*

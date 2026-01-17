@@ -1,0 +1,346 @@
+---
+title: État de l'art
+description: Analyse comparative des technologies et solutions concurrentes
+sidebar:
+  order: 1
+---
+
+import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/components';
+
+# 📚 État de l'art
+
+<Aside type="note">
+  Cette section présente les choix technologiques de Mindlet et les compare aux alternatives disponibles sur le marché.
+</Aside>
+
+## Analyse du marché EdTech
+
+### Applications concurrentes
+
+| Application | Points forts | Points faibles | Prix |
+|-------------|--------------|----------------|------|
+| **Anki** | Open source, puissant, répétition espacée | Interface datée, courbe d'apprentissage | Gratuit |
+| **Quizlet** | Large communauté, multiplateforme | IA limitée, pas de génération auto | Freemium |
+| **Brainscape** | Flashcards scientifiques | Contenus limités, payant | 9.99€/mois |
+| **Notion** | Flexible, wiki personnel | Pas de fonctions d'apprentissage | Freemium |
+| **Kahoot** | Gamification, mode classe | Orienté enseignant, pas de génération | Freemium |
+
+### Positionnement de Mindlet
+
+<CardGrid>
+  <Card title="Différenciateur 1" icon="star">
+    **Génération IA automatique** - Transformation de n'importe quel contenu en exercices interactifs
+  </Card>
+  <Card title="Différenciateur 2" icon="puzzle">
+    **10+ formats** - Variété de formats d'apprentissage (vs 1-2 chez la concurrence)
+  </Card>
+  <Card title="Différenciateur 3" icon="heart">
+    **Accessibilité** - Fonctions pour les troubles d'apprentissage
+  </Card>
+  <Card title="Différenciateur 4" icon="add-document">
+    **Communauté** - Partage et collaboration entre apprenants
+  </Card>
+</CardGrid>
+
+## Choix technologiques
+
+### Frontend Mobile
+
+<Tabs>
+  <TabItem label="Notre choix : React Native">
+    <Badge text="Choisi" variant="success" />
+    
+    **Avantages :**
+    - Code unique pour iOS et Android
+    - Large écosystème de packages
+    - Performance proche du natif
+    - Grande communauté et support
+    - Intégration Expo pour le développement rapide
+    
+    **Inconvénients :**
+    - Performance inférieure au natif pur
+    - Dépendance à Facebook/Meta
+    - Bridge JavaScript limitant pour certains cas
+  </TabItem>
+  
+  <TabItem label="Alternative : Flutter">
+    **Avantages :**
+    - Performance excellente
+    - UI pixel-perfect sur toutes plateformes
+    - Hot reload très rapide
+    - Backing Google
+    
+    **Inconvénients :**
+    - Langage Dart moins répandu
+    - Écosystème plus jeune
+    - Taille des applications plus importante
+    - Moins de développeurs disponibles
+    
+    **Pourquoi non choisi :**
+    Notre équipe avait plus d'expérience en JavaScript/TypeScript, et l'écosystème React Native est plus mature pour notre cas d'usage.
+  </TabItem>
+  
+  <TabItem label="Alternative : Natif (Swift/Kotlin)">
+    **Avantages :**
+    - Performance optimale
+    - Accès complet aux APIs natives
+    - Meilleure intégration système
+    
+    **Inconvénients :**
+    - Deux bases de code à maintenir
+    - Coût de développement doublé
+    - Nécessite des compétences distinctes
+    
+    **Pourquoi non choisi :**
+    Avec une équipe de 2 personnes, maintenir deux applications natives n'était pas viable.
+  </TabItem>
+</Tabs>
+
+### Backend API
+
+<Tabs>
+  <TabItem label="Notre choix : Laravel">
+    <Badge text="Choisi" variant="success" />
+    
+    **Avantages :**
+    - Framework PHP le plus populaire
+    - Écosystème complet (auth, queues, cache, etc.)
+    - Excellent ORM (Eloquent)
+    - Documentation exceptionnelle
+    - Grande communauté francophone
+    
+    **Inconvénients :**
+    - PHP moins "hype" que d'autres langages
+    - Performance brute inférieure à Go/Rust
+    
+    **Pourquoi choisi :**
+    Migration depuis FastAPI pour bénéficier d'un écosystème plus mature et d'une meilleure productivité de développement.
+  </TabItem>
+  
+  <TabItem label="Alternative : FastAPI (Python)">
+    **Notre prototype initial**
+    
+    **Avantages :**
+    - Très rapide (basé sur Starlette)
+    - Typage Python moderne
+    - Documentation auto-générée
+    - Intégration facile avec les libs ML
+    
+    **Inconvénients :**
+    - Écosystème moins mature que Laravel
+    - Pas d'ORM intégré aussi puissant
+    - Configuration manuelle de beaucoup de choses
+    
+    **Pourquoi migré :**
+    Le temps passé à réinventer des fonctionnalités existantes dans Laravel était contre-productif.
+  </TabItem>
+  
+  <TabItem label="Alternative : NestJS">
+    **Avantages :**
+    - TypeScript natif
+    - Architecture inspirée d'Angular
+    - Décorateurs et injection de dépendances
+    
+    **Inconvénients :**
+    - Courbe d'apprentissage
+    - Moins de packages spécifiques
+    - Configuration verbose
+    
+    **Pourquoi non choisi :**
+    Laravel offrait une productivité immédiate supérieure pour notre cas d'usage.
+  </TabItem>
+</Tabs>
+
+### Intelligence Artificielle
+
+<Tabs>
+  <TabItem label="Notre choix : LangChain + LangGraph">
+    <Badge text="Choisi" variant="success" />
+    
+    **Avantages :**
+    - Orchestration puissante des LLM
+    - Agents et chaînes modulaires
+    - Support multi-modèles (OpenAI, Anthropic, local)
+    - Intégration vectorielle native
+    
+    **Inconvénients :**
+    - Évolution rapide (breaking changes)
+    - Abstraction parfois excessive
+    - Documentation inégale
+  </TabItem>
+  
+  <TabItem label="Alternative : Appels directs OpenAI">
+    **Avantages :**
+    - Simplicité d'implémentation
+    - Pas de dépendance supplémentaire
+    - Contrôle total
+    
+    **Inconvénients :**
+    - Pas d'abstraction
+    - Code répétitif
+    - Difficile à maintenir à l'échelle
+    
+    **Pourquoi non choisi :**
+    LangChain apporte une structure nécessaire pour des workflows IA complexes.
+  </TabItem>
+  
+  <TabItem label="Alternative : LlamaIndex">
+    **Avantages :**
+    - Excellent pour RAG
+    - Indexation optimisée
+    - Bonne intégration vectorielle
+    
+    **Inconvénients :**
+    - Moins flexible pour la génération
+    - Focus sur la recherche plus que la création
+    
+    **Pourquoi non choisi :**
+    LangGraph offrait plus de flexibilité pour nos workflows de génération de contenu.
+  </TabItem>
+</Tabs>
+
+### Base de données vectorielle
+
+<Tabs>
+  <TabItem label="Notre choix : Qdrant">
+    <Badge text="Choisi" variant="success" />
+    
+    **Avantages :**
+    - Performance excellente
+    - API REST simple
+    - Filtrage avancé
+    - Open source et cloud disponible
+    - Écrit en Rust (performant)
+    
+    **Inconvénients :**
+    - Moins connu que Pinecone
+    - Documentation en amélioration
+  </TabItem>
+  
+  <TabItem label="Alternative : ChromaDB">
+    **Notre choix initial (prototype)**
+    
+    **Avantages :**
+    - Simple à déployer
+    - Intégration Python native
+    - Open source
+    
+    **Inconvénients :**
+    - Moins performant à l'échelle
+    - Pas de version cloud mature
+    - Moins de fonctionnalités avancées
+    
+    **Pourquoi migré :**
+    Qdrant offre de meilleures performances et une meilleure scalabilité.
+  </TabItem>
+  
+  <TabItem label="Alternative : Pinecone">
+    **Avantages :**
+    - Leader du marché
+    - Managed cloud
+    - Très performant
+    
+    **Inconvénients :**
+    - Coût élevé
+    - Vendor lock-in
+    - Serveurs hors UE
+    
+    **Pourquoi non choisi :**
+    Conformité RGPD et coûts prohibitifs pour une startup.
+  </TabItem>
+</Tabs>
+
+### Hébergement cloud
+
+<Tabs>
+  <TabItem label="Notre choix : OVHcloud + Hetzner">
+    <Badge text="Choisi" variant="success" />
+    
+    **Avantages :**
+    - Hébergement **100% européen** (RGPD)
+    - Coûts compétitifs
+    - Kubernetes managé (OVH)
+    - Serveurs performants (Hetzner)
+    
+    **Inconvénients :**
+    - Moins de services managés qu'AWS
+    - Documentation parfois limitée
+  </TabItem>
+  
+  <TabItem label="Alternative : AWS">
+    **Avantages :**
+    - Leader du marché
+    - Énorme catalogue de services
+    - Documentation excellente
+    
+    **Inconvénients :**
+    - Coûts élevés
+    - Complexité des prix
+    - Régions UE limitées pour certains services
+    
+    **Pourquoi non choisi :**
+    Coûts et préférence pour des acteurs européens.
+  </TabItem>
+  
+  <TabItem label="Alternative : Vercel/Railway">
+    **Avantages :**
+    - Déploiement ultra-simple
+    - DX excellente
+    - Intégration Git native
+    
+    **Inconvénients :**
+    - Coûts à l'échelle
+    - Moins de contrôle
+    - Pas idéal pour du backend lourd
+    
+    **Pourquoi non choisi :**
+    Notre architecture nécessite plus de contrôle et de personnalisation.
+  </TabItem>
+</Tabs>
+
+## Comparatif synthétique
+
+### Stack technique finale
+
+| Couche | Technologie | Alternatives considérées |
+|--------|-------------|-------------------------|
+| **Mobile** | React Native + Expo | Flutter, Swift/Kotlin |
+| **API** | Laravel 11 | FastAPI, NestJS, Rails |
+| **IA** | LangChain + LangGraph | OpenAI direct, LlamaIndex |
+| **BDD relationnelle** | PostgreSQL | MySQL, MongoDB |
+| **BDD vectorielle** | Qdrant | ChromaDB, Pinecone |
+| **Cache** | Redis | Memcached |
+| **Orchestration** | Kubernetes | Docker Swarm, Nomad |
+| **Hébergement** | OVHcloud + Hetzner | AWS, GCP, Azure |
+
+### Critères de choix
+
+<CardGrid>
+  <Card title="Performance" icon="rocket">
+    Technologies capables de supporter une montée en charge
+  </Card>
+  <Card title="Productivité" icon="pencil">
+    Outils permettant un développement rapide avec une petite équipe
+  </Card>
+  <Card title="Communauté" icon="add-document">
+    Écosystèmes matures avec support disponible
+  </Card>
+  <Card title="Conformité" icon="approve-check">
+    Solutions compatibles RGPD et hébergées en Europe
+  </Card>
+</CardGrid>
+
+## Évolution technologique
+
+### Technologies à surveiller
+
+| Technologie | Potentiel pour Mindlet | Horizon |
+|-------------|----------------------|---------|
+| **React Native New Architecture** | Performance améliorée | 2026 |
+| **LLMs locaux (Ollama)** | Réduction des coûts IA | 2025 |
+| **Edge computing** | Latence réduite | 2026 |
+| **WebAssembly** | Performance mobile | 2027 |
+
+---
+
+*Des choix technologiques pragmatiques, orientés productivité et scalabilité.*
