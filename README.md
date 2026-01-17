@@ -1,49 +1,80 @@
-# Starlight Starter Kit: Basics
+# Mindlet — Documentation technique
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
 
-```
-bun create astro@latest -- --template starlight
-```
+Documentation technique complète du projet Mindlet (rapport de Master Informatique — Parcours Développement Full Stack).
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## ✅ Contenu ajouté
 
-## 🚀 Project Structure
+- Page d’accueil (splash) et structure Starlight personnalisée
+- Sections : Introduction, Architecture, Projet, Annexes
+- Pages détaillées : backend, frontend, IA, sécurité/RGPD, tests, performances, SEO
+- Intégration des schémas et captures d’écran
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+## 📚 Plan de documentation
+
+### Introduction
+- Présentation de Mindlet
+- Notre histoire
+
+### Architecture
+- Vue d’ensemble (n-tiers + cloud)
+- Backend (Laravel)
+- Frontend (React Native)
+- Service IA (LangChain / LangGraph)
+
+### Projet
+- Équipe & organisation
+- Sécurité & RGPD
+- Tests & qualité
+- Performances & scalabilité
+
+### Annexes
+- État de l’art (technos & alternatives)
+- Difficultés & retours d’expérience
+- SEO & site web (Astro)
+
+## 🗂️ Structure du projet
 
 ```
 .
 ├── public/
 ├── src/
 │   ├── assets/
+│   │   ├── app-screenshots/
+│   │   └── elements/
 │   ├── content/
 │   │   └── docs/
+│   │       ├── index.mdx
+│   │       ├── introduction/
+│   │       ├── architecture/
+│   │       ├── projet/
+│   │       └── annexes/
 │   └── content.config.ts
 ├── astro.config.mjs
 ├── package.json
 └── tsconfig.json
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+## 🧭 Points d’entrée utiles
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+- Page d’accueil : [src/content/docs/index.mdx](src/content/docs/index.mdx)
+- Sidebar Starlight : [astro.config.mjs](astro.config.mjs)
+- Assets & diagrammes : [src/assets](src/assets)
 
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
+## 🧞 Commandes
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+| `bun install`             | Installe les dépendances                         |
+| `bun dev`                 | Démarre le serveur en local (`localhost:4321`)   |
+| `bun build`               | Build de production dans `./dist/`               |
+| `bun preview`             | Prévisualise le build                            |
+| `bun astro ...`           | Commandes Astro (`astro add`, `astro check`)     |
+| `bun astro -- --help`     | Aide CLI Astro                                   |
 
-## 👀 Want to learn more?
+## 🔗 Liens
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+- Site web : https://mindlet.app
+- Starlight : https://starlight.astro.build
+- Astro : https://docs.astro.build
