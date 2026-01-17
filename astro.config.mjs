@@ -14,7 +14,7 @@ export default defineConfig({
           },
           social: [
               { icon: 'github', label: 'GitHub', href: 'https://github.com/mindlet-app' },
-              { icon: 'apple', label: 'Site web', href: 'https://mindlet.app' },
+              { icon: 'rocket', label: 'Site web', href: 'https://www.mindlet.app' },
           ],
           sidebar: [
               {

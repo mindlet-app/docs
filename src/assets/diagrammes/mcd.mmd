@@ -1,0 +1,395 @@
+---
+config:
+  layout: elk
+  theme: forest
+---
+erDiagram
+	direction TB
+	USERS {
+		uuid id PK ""  
+		string name  ""  
+		string email  ""  
+		timestamp email_verified_at  ""  
+		string password  ""  
+		string remember_token  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ORGANIZATIONS {
+		uuid id PK ""  
+		string name  ""  
+		string slug  ""  
+		string description  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ORGANIZATION_MEMBERS {
+		uuid id PK ""  
+		uuid organization_id FK ""  
+		uuid user_id FK ""  
+		string role  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ORGANIZATION_INVITATIONS {
+		uuid id PK ""  
+		uuid organization_id FK ""  
+		uuid inviter_id FK ""  
+		string invitee_email  ""  
+		string token  ""  
+		timestamp expires_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	COLLECTIONS {
+		uuid id PK ""  
+		uuid owner_id FK ""  
+		uuid parent_id FK ""  
+		uuid organization_id FK ""  
+		string title  ""  
+		string description  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	COLLECTION_COLLABORATORS {
+		uuid id PK ""  
+		uuid collection_id FK ""  
+		uuid user_id FK ""  
+		string role  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	CARDS {
+		uuid id PK ""  
+		uuid collection_id FK ""  
+		string type  ""  
+		string front  ""  
+		string back  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	CARD_PROGRESSIONS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		uuid card_id FK ""  
+		timestamp last_reviewed_at  ""  
+		integer streak  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	STUDY_SESSIONS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		uuid collection_id FK ""  
+		string status  ""  
+		timestamp started_at  ""  
+		timestamp ended_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	TAGS {
+		uuid id PK ""  
+		string name  ""  
+		string color  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	TAGGABLES {
+		bigint id PK ""  
+		uuid tag_id FK ""  
+		uuid taggable_id  ""  
+		string taggable_type  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	USER_ACHIEVEMENTS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		string achievement_key  ""  
+		timestamp unlocked_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	USER_FOLLOWS {
+		uuid id PK ""  
+		uuid follower_id FK ""  
+		uuid followed_id FK ""  
+		timestamp created_at  ""  
+	}
+
+	USER_FRIENDSHIPS {
+		uuid id PK ""  
+		uuid requester_id FK ""  
+		uuid addressee_id FK ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	POSTS {
+		uuid id PK ""  
+		uuid author_id FK ""  
+		uuid collection_id FK ""  
+		string content  ""  
+		timestamp published_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	POST_MENTIONS {
+		uuid id PK ""  
+		uuid post_id FK ""  
+		uuid mentionable_id  ""  
+		string mentionable_type  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	POST_REACTIONS {
+		uuid id PK ""  
+		uuid post_id FK ""  
+		uuid user_id FK ""  
+		string kind  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	CONVERSATIONS {
+		uuid id PK ""  
+		string type  ""  
+		string topic  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	DIRECT_CONVERSATIONS {
+		uuid id PK ""  
+		uuid conversation_id FK ""  
+		uuid user_one_id FK ""  
+		uuid user_two_id FK ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	GROUPS {
+		uuid id PK ""  
+		uuid conversation_id FK ""  
+		uuid owner_id FK ""  
+		string name  ""  
+		string description  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	CONVERSATION_PARTICIPANTS {
+		uuid id PK ""  
+		uuid conversation_id FK ""  
+		uuid user_id FK ""  
+		timestamp joined_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	MESSAGES {
+		uuid id PK ""  
+		uuid conversation_id FK ""  
+		uuid sender_id FK ""  
+		string content  ""  
+		timestamp sent_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	MESSAGE_REACTIONS {
+		uuid id PK ""  
+		uuid message_id FK ""  
+		uuid user_id FK ""  
+		string kind  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	GROUP_INVITATIONS {
+		uuid id PK ""  
+		uuid group_id FK ""  
+		uuid inviter_id FK ""  
+		uuid invitee_id FK ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	AI_RESOURCE_BATCHES {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	AI_RESOURCE_ITEMS {
+		uuid id PK ""  
+		uuid batch_id FK ""  
+		string resource_type  ""  
+		string file_hash  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	AI_RESOURCE_EMBEDDINGS {
+		uuid id PK ""  
+		uuid item_id FK ""  
+		string embedding_type  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	AI_CARD_GENERATIONS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		string generation_key  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	USER_AI_QUOTAS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		integer monthly_quota  ""  
+		integer used  ""  
+		timestamp reset_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	MEDIA {
+		bigint id PK ""  
+		uuid model_id  ""  
+		string model_type  ""  
+		string file_name  ""  
+		string disk  ""  
+		string path  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SOCIAL_ACCOUNTS {
+		uuid id PK ""  
+		uuid user_id FK ""  
+		string provider  ""  
+		string provider_user_id  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	PERSONAL_ACCESS_TOKENS {
+		bigint id PK ""  
+		uuid tokenable_id  ""  
+		string tokenable_type  ""  
+		string name  ""  
+		string token  ""  
+		timestamp last_used_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	PERMISSIONS {
+		bigint id PK ""  
+		string name  ""  
+		string guard_name  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ROLES {
+		bigint id PK ""  
+		string name  ""  
+		string guard_name  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	MODEL_HAS_PERMISSIONS {
+		bigint permission_id FK ""  
+		uuid model_id  ""  
+		string model_type  ""  
+	}
+
+	MODEL_HAS_ROLES {
+		bigint role_id FK ""  
+		uuid model_id  ""  
+		string model_type  ""  
+	}
+
+	ROLE_HAS_PERMISSIONS {
+		bigint permission_id FK ""  
+		bigint role_id FK ""  
+	}
+
+	USERS||--o{COLLECTIONS:"owns"
+	COLLECTIONS|o--o{ORGANIZATIONS:"assigned_to"
+	USERS||--o{COLLECTION_COLLABORATORS:"collaborates"
+	COLLECTIONS||--o{COLLECTION_COLLABORATORS:"has_collaborator"
+	COLLECTIONS||--o{CARDS:"contains"
+	USERS||--o{CARD_PROGRESSIONS:"tracks"
+	CARDS||--o{CARD_PROGRESSIONS:"progress"
+	USERS||--o{STUDY_SESSIONS:"runs"
+	COLLECTIONS||--o{STUDY_SESSIONS:"studied_in"
+	TAGS||--o{TAGGABLES:"links"
+	COLLECTIONS|o--o{TAGGABLES:"tagged_collection"
+	CARDS|o--o{TAGGABLES:"tagged_card"
+	USERS||--o{USER_ACHIEVEMENTS:"earns"
+	USERS||--o{USER_FOLLOWS:"follower"
+	USER_FOLLOWS}o--||USERS:"followed"
+	USERS||--o{USER_FRIENDSHIPS:"requests"
+	USER_FRIENDSHIPS}o--||USERS:"friend"
+	USERS||--o{POSTS:"authors"
+	COLLECTIONS|o--o{POSTS:"feeds"
+	POSTS||--o{POST_REACTIONS:"receives_reaction"
+	USERS||--o{POST_REACTIONS:"reacts"
+	POSTS||--o{POST_MENTIONS:"mentions"
+	POST_MENTIONS}o--||USERS:"mention_target"
+	CONVERSATIONS||--o{MESSAGES:"contains"
+	USERS||--o{MESSAGES:"sends"
+	CONVERSATIONS||--o{CONVERSATION_PARTICIPANTS:"has_participant"
+	USERS||--o{CONVERSATION_PARTICIPANTS:"participates"
+	CONVERSATIONS||--||DIRECT_CONVERSATIONS:"direct_thread"
+	DIRECT_CONVERSATIONS||--o{USERS:"user_one"
+	DIRECT_CONVERSATIONS||--o{USERS:"user_two"
+	CONVERSATIONS||--||GROUPS:"group_thread"
+	GROUPS||--o{GROUP_INVITATIONS:"issues"
+	USERS||--o{GROUP_INVITATIONS:"invites"
+	GROUP_INVITATIONS}o--||USERS:"invited"
+	GROUPS||--o{CONVERSATION_PARTICIPANTS:"members"
+	MESSAGES||--o{MESSAGE_REACTIONS:"receives_reaction"
+	USERS||--o{MESSAGE_REACTIONS:"reacts"
+	USERS||--o{AI_RESOURCE_BATCHES:"submits_batch"
+	AI_RESOURCE_BATCHES||--o{AI_RESOURCE_ITEMS:"includes_item"
+	AI_RESOURCE_ITEMS||--o{AI_RESOURCE_EMBEDDINGS:"has_embedding"
+	USERS||--o{AI_CARD_GENERATIONS:"requests_generation"
+	USERS||--o{USER_AI_QUOTAS:"quota_records"
+	AI_RESOURCE_ITEMS}o--||MEDIA:"stored_media"
+	USERS||--o{SOCIAL_ACCOUNTS:"links_account"
+	USERS||--o{PERSONAL_ACCESS_TOKENS:"tokens"
+	PERMISSIONS||--o{ROLE_HAS_PERMISSIONS:"granted_to_role"
+	ROLES||--o{ROLE_HAS_PERMISSIONS:"aggregates_permission"
+	ROLES||--o{MODEL_HAS_ROLES:"assigned_to"
+	USERS||--o{MODEL_HAS_ROLES:"user_role"
+	PERMISSIONS||--o{MODEL_HAS_PERMISSIONS:"assigned_to"
+	USERS||--o{MODEL_HAS_PERMISSIONS:"user_permission"
+	ORGANIZATIONS||--o{ORGANIZATION_MEMBERS:"has_member"
+	USERS||--o{ORGANIZATION_MEMBERS:"membership"
+	ORGANIZATIONS||--o{ORGANIZATION_INVITATIONS:"issues_invite"
+	USERS||--o{ORGANIZATION_INVITATIONS:"invites"

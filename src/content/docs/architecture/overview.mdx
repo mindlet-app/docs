@@ -17,26 +17,7 @@ import { Aside, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/compone
 
 Notre architecture est composée de trois couches principales :
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    COUCHE PRÉSENTATION                       │
-│                  (React Native Mobile App)                   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ HTTPS / REST API
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    COUCHE MÉTIER                            │
-│              (Laravel API + Service IA)                      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    COUCHE DONNÉES                           │
-│        (PostgreSQL + Qdrant + MinIO)                        │
-└─────────────────────────────────────────────────────────────┘
-```
+![Overview](../../../assets/elements/architecture-overview.png)
 
 ## Composants principaux
 

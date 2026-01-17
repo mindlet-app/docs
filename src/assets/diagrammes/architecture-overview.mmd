@@ -1,0 +1,11 @@
+architecture-beta
+    group architecture(cloud)[Architecture]
+
+    service client(internet)[Frontend] in architecture
+    service api(server)[API] in architecture
+    service ia(server)[IA] in architecture
+    service db(database)[Donnees] in architecture
+
+    client:R -- L:api
+    api:R -- L:db
+    api:B -- T:ia
