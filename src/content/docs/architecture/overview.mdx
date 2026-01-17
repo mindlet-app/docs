@@ -17,7 +17,7 @@ import { Aside, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/compone
 
 Notre architecture est composée de trois couches principales :
 
-![Overview](../../../assets/elements/architecture-overview.png)
+![Overview](../../../assets/diagrammes/architecture-overview.png)
 
 ## Composants principaux
 
@@ -40,17 +40,17 @@ Notre architecture est composée de trois couches principales :
 
 Notre infrastructure est déployée sur des services cloud européens pour garantir la conformité RGPD :
 
-![Architecture Cloud](../../../assets/elements/cloud-architecture.png)
+![Architecture Cloud](../../../assets/diagrammes/cloud-architecture.png)
 
 ### Composants cloud
 
 | Composant | Service | Fournisseur |
 |-----------|---------|-------------|
 | **Orchestration** | Kubernetes | OVHcloud |
-| **Base de données** | PostgreSQL Managed | OVHcloud |
 | **Load Balancer** | Cloud Load Balancer | OVHcloud |
-| **Serveurs** | VPS | Hetzner |
-| **CDN** | - | Europe |
+| **Base de données** | PostgreSQL Managed | Neon |
+| **Base vectorielle** | Qdrant Managed | Qdrant Cloud |
+| **Stockage objets** | VPS | Hetzner |
 
 ## Architecture n-tiers détaillée
 
@@ -62,9 +62,9 @@ Notre infrastructure est déployée sur des services cloud européens pour garan
     
     - **Technologie** : React Native avec Expo
     - **État global** : Zustand
-    - **Navigation** : React Navigation
+    - **Navigation** : Expo Router
     - **UI Components** : NativeWind (Tailwind CSS)
-    - **Requêtes API** : Axios avec intercepteurs
+    - **Requêtes API** : React Query
     
     Cette couche ne contient **aucune logique métier** et se contente de :
     - Afficher les données reçues de l'API
@@ -87,7 +87,7 @@ Notre infrastructure est déployée sur des services cloud européens pour garan
     - Génération de contenu pédagogique
     - Analyse sémantique des documents
     - Création de questions/réponses
-    - Embeddings et recherche vectorielle
+    - Embeddings et analyse vectorielle
   </TabItem>
   
   <TabItem label="Données">
@@ -100,41 +100,20 @@ Notre infrastructure est déployée sur des services cloud européens pour garan
     | **Relationnel** | PostgreSQL | Données structurées (users, collections, cards) |
     | **Vectoriel** | Qdrant | Embeddings pour la recherche sémantique |
     | **Objets** | MinIO | Fichiers (images, PDFs, médias) |
-    | **Cache** | Redis | Sessions, cache applicatif |
+    | **Cache** | Redis | Sessions, workers, cache applicatif |
   </TabItem>
 </Tabs>
 
 ## Communication inter-services
 
-### Frontend ↔ Backend
+### Frontend ↔ Backend ↔ Service IA
 
-```
-┌──────────────┐         HTTPS/TLS          ┌──────────────┐
-│   Mobile     │ ◄──────────────────────► │   Laravel    │
-│   React      │      REST API JSON        │   API        │
-│   Native     │                           │              │
-└──────────────┘                           └──────────────┘
-```
+![Frontend to Backend](../../../assets/diagrammes/frontend-backend.png)
 
 **Caractéristiques :**
 - Communication via **HTTPS** exclusivement
 - Format d'échange : **JSON**
 - Authentification : **JWT (Bearer Token)**
-- Versioning API : **Préfixe /api/v1/**
-
-### Backend ↔ Service IA
-
-```
-┌──────────────┐       HTTP interne         ┌──────────────┐
-│   Laravel    │ ◄──────────────────────► │   Service    │
-│   API        │       REST/gRPC           │   IA         │
-└──────────────┘                           └──────────────┘
-```
-
-**Caractéristiques :**
-- Communication interne au cluster Kubernetes
-- Appels synchrones pour les opérations rapides
-- Jobs asynchrones pour les traitements longs (génération de contenu)
 
 ## Scalabilité
 
@@ -156,10 +135,9 @@ Notre architecture est conçue pour supporter une **montée en charge** :
 
 | Utilisateurs | Instances API | Instances IA | DB Connections |
 |--------------|---------------|--------------|----------------|
-| 100 | 2 | 1 | 10 |
-| 1 000 | 4 | 2 | 50 |
-| 10 000 | 8 | 4 | 100 |
-| 100 000 | 16+ | 8+ | 200+ |
+| 100 | 1 | 2 | 10 |
+| 5 000 | 2 | 4 | 50 |
+| 50 000+ | 4+ | 8+ | 200+ |
 
 <Aside type="tip">
   L'architecture Kubernetes permet de **scaler automatiquement** en fonction de la demande, garantissant une disponibilité optimale même en cas de pics d'utilisation.
@@ -169,12 +147,11 @@ Notre architecture est conçue pour supporter une **montée en charge** :
 
 ### Modèle Conceptuel de Données (MCD)
 
-![MCD](../../../assets/elements/mcd.png)
+![MCD](../../../assets/diagrammes/mcd.png)
 
 ### Modèle Physique de Données (MPD)
 
-![MPD](../../../assets/elements/mpd.png)
-
+![MPD](../../../assets/diagrammes/mpd.png)
 ---
 
 *Architecture conçue pour la performance, la scalabilité et la maintenabilité.*

@@ -1,0 +1,71 @@
+---
+config:
+  layout: elk
+  theme: base
+---
+flowchart LR
+ subgraph Client["Client"]
+        RN["React Native"]
+  end
+ subgraph DNS["DNS"]
+        API_DNS["api.mindlet.app"]
+        WS_DNS["ws.mindlet.app"]
+  end
+ subgraph Ingress["Nginx Ingress Controller"]
+        LB["Load Balancer"]
+        RT["Router"]
+  end
+ subgraph API["API Deployment"]
+        OCT["Laravel Octane"]
+        POD_API1["POD"]
+        POD_API2["POD"]
+        POD_API3["POD"]
+  end
+ subgraph WS["WS Deployment"]
+        REV["Laravel Reverb"]
+        POD_WS["POD"]
+  end
+ subgraph REDIS["Redis Service"]
+        REDIS_APP["Redis"]
+        POD_REDIS["POD"]
+  end
+ subgraph WORKERS["Worker supervisors"]
+        HZ["Laravel Horizon"]
+        POD_W1["POD"]
+        POD_W2["POD"]
+        POD_W3["POD"]
+  end
+ subgraph K8S["OVH Cloud Kubernetes Cluster"]
+        Ingress
+        API_SVC(("api-service"))
+        WS_SVC(("ws-service"))
+        API
+        WS
+        REDIS
+        WORKERS
+  end
+ subgraph Neon["Neon"]
+        PG[("PostgreSQL")]
+  end
+ subgraph Qdrant["Qdrant Cloud"]
+        VDB[("Vector DB")]
+  end
+ subgraph LangGraph["LangGraph Cloud"]
+        CARD["Card generation"]
+        EMB["Embeddings"]
+  end
+    RN --> API_DNS & WS_DNS
+    LB --> RT
+    API_DNS --> LB
+    WS_DNS --> LB
+    RT --> API_SVC & WS_SVC
+    OCT --> POD_API1 & POD_API2 & POD_API3
+    REV --> POD_WS
+    REDIS_APP --> POD_REDIS
+    HZ --> POD_W1 & POD_W2 & POD_W3
+    API_SVC --> API
+    WS_SVC --> WS
+    API <--> REDIS
+    WS <--> REDIS
+    WORKERS <--> REDIS
+    API --> PG & VDB & CARD & EMB

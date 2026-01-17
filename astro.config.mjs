@@ -3,6 +3,7 @@ import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
 
 import cloudflare from '@astrojs/cloudflare';
+import starlightImageZoomPlugin from 'starlight-image-zoom';
 
 // https://astro.build/config
 export default defineConfig({
@@ -52,6 +53,7 @@ export default defineConfig({
               },
           ],
           customCss: [],
+					plugins: [starlightImageZoomPlugin()]
       }),
 	],
 

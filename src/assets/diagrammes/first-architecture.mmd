@@ -1,0 +1,39 @@
+---
+config:
+  layout: dagre
+  theme: base
+---
+flowchart LR
+    subgraph Frontend
+        WEB[Next.js]
+        MOB[React Native]
+        DESK[Electron]
+    end
+    subgraph Backend
+        NGINX[Serveur Nginx]
+        subgraph API[REST API]
+            FAST[FastAPI]
+
+            LLM[Modèle LLM Mistral]
+            EMB[Modèle Embedding]
+            OCR["Modèle OCR (vision)"]
+            MINIO[Stockage de fichier avec MinIO]
+
+            FAST -.-> LLM
+            FAST -.-> EMB
+            FAST -.-> OCR
+            FAST -.-> MINIO
+        end
+        subgraph DB[SGBD]
+            PG[(POSTGRES)]
+            CH[(CHROMA)]
+            PG <-->|Les données sont liées| CH
+        end
+    end
+    WEB --> NGINX
+    MOB --> NGINX
+    DESK --> NGINX
+
+    NGINX --> FAST
+    FAST --> PG
+    FAST --> CH

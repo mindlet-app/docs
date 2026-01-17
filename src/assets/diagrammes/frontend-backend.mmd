@@ -1,0 +1,17 @@
+---
+config:
+  layout: dagre
+  theme: base
+---
+flowchart LR
+    subgraph Frontend
+        MOB[React Native]
+    end
+    subgraph Backend
+        API[Laravel]
+    end
+    subgraph Service IA
+        IA[LangGraph]
+    end
+    MOB <-->|REST API JSON| API
+    API <-->|REST API JSON| IA
