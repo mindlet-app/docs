@@ -9,13 +9,13 @@ import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/component
 
 # 🔧 Backend API Laravel
 
-<Badge text="Laravel 11" variant="success" />
-<Badge text="PHP 8.3" variant="note" />
-<Badge text="PostgreSQL" variant="caution" />
+<Badge text="Laravel 12" variant="success" />
+<Badge text="PHP 8.4" variant="caution" />
+<Badge text="PostgreSQL" variant="note" />
 
 ## Présentation
 
-Le backend de Mindlet est une **API RESTful** développée avec **Laravel 11**, offrant une interface robuste et sécurisée pour l'application mobile.
+Le backend de Mindlet est une **API RESTful** développée avec **Laravel 12**, offrant une interface robuste et sécurisée pour l'application mobile.
 
 <Aside type="note">
   Nous avons migré de FastAPI (Python) vers Laravel (PHP) pour bénéficier d'un écosystème plus mature et d'une meilleure productivité de développement.
@@ -25,29 +25,34 @@ Le backend de Mindlet est une **API RESTful** développée avec **Laravel 11**, 
 
 | Composant | Technologie | Version |
 |-----------|-------------|---------|
-| **Framework** | Laravel | 11.x |
-| **Langage** | PHP | 8.3 |
-| **Base de données** | PostgreSQL | 16 |
-| **Cache** | Redis | 7.x |
+| **Framework** | Laravel | 12.x |
+| **Langage** | PHP | 8.4 |
+| **Base de données** | PostgreSQL | 17 |
+| **Cache** | Redis | 8.2 |
 | **Queue** | Laravel Horizon | - |
-| **Auth** | Laravel Sanctum | JWT |
+| **Auth** | Laravel Sanctum | - |
 
 ## Architecture du code
 
 ```
-app/
-├── Http/
-│   ├── Controllers/         # Contrôleurs API
-│   ├── Middleware/          # Middlewares personnalisés
-│   ├── Requests/            # Form Requests (validation)
-│   └── Resources/           # API Resources (transformation)
-├── Models/                  # Modèles Eloquent
-├── Services/                # Services métier
-├── Repositories/            # Repositories (abstraction BDD)
-├── Jobs/                    # Jobs asynchrones
-├── Events/                  # Événements applicatifs
-├── Listeners/               # Listeners d'événements
-└── Policies/                # Policies d'autorisation
+app
+├── Dtos
+├── Enums
+├── Events
+├── Exceptions
+├── Filament
+├── Http
+│   ├── Controllers
+│   ├── Middleware
+│   ├── Requests
+│   └── Resources
+├── Jobs
+├── Listeners
+├── Models
+├── Notifications
+├── Policies
+├── Providers
+└── Services
 ```
 
 ## Principes d'architecture
@@ -118,46 +123,22 @@ app/
   </TabItem>
 </Tabs>
 
-## Endpoints principaux
+## Documentation de l'API
 
-### Authentification
+L'API est entièrement documentée selon la spécification **OpenAPI 3.0** grâce au package **Scramble**. Celui-ci génère automatiquement la documentation à partir des routes, contrôleurs et annotations, sans maintenance manuelle.
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/api/v1/auth/register` | Inscription |
-| POST | `/api/v1/auth/login` | Connexion |
-| POST | `/api/v1/auth/logout` | Déconnexion |
-| POST | `/api/v1/auth/refresh` | Rafraîchir le token |
-| GET | `/api/v1/auth/me` | Profil utilisateur |
+### Points clés
 
-### Collections
+- **Auto‑discovery** des endpoints et schémas depuis le code
+- **Documentation OpenAPI** complète et versionnée
+- **Interface interactive** intégrée pour tester les requêtes HTTP
+- **Sandbox** de test pour valider rapidement les réponses
+- **Synchronisation continue** : la doc reste alignée avec l’API
 
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/v1/collections` | Liste des collections |
-| POST | `/api/v1/collections` | Créer une collection |
-| GET | `/api/v1/collections/{id}` | Détail d'une collection |
-| PUT | `/api/v1/collections/{id}` | Modifier une collection |
-| DELETE | `/api/v1/collections/{id}` | Supprimer une collection |
+<Aside type="note">
+  Le lien vers la documentation complète de l'API : [API Docs](https://api.mindlet.app/docs/api)
+</Aside>
 
-### Cartes
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/api/v1/cards` | Liste des cartes |
-| POST | `/api/v1/cards` | Créer une carte |
-| POST | `/api/v1/cards/generate` | Générer via IA |
-| GET | `/api/v1/cards/{id}` | Détail d'une carte |
-| PUT | `/api/v1/cards/{id}` | Modifier une carte |
-| DELETE | `/api/v1/cards/{id}` | Supprimer une carte |
-
-### Documents
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/api/v1/documents/upload` | Upload de document |
-| POST | `/api/v1/documents/analyze` | Analyse par l'IA |
-| GET | `/api/v1/documents/{id}` | Détail du document |
 
 ## Sécurité
 
@@ -192,7 +173,6 @@ Route::middleware([
 | **Hashing** | Mots de passe hashés avec bcrypt |
 | **HTTPS** | TLS 1.3 obligatoire |
 | **CORS** | Configuration restrictive |
-| **Rate Limiting** | 60 requêtes/minute par utilisateur |
 
 ## Jobs asynchrones
 
