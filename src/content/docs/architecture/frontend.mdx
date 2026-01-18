@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 📱 Frontend React Native
 
@@ -33,6 +34,7 @@ L'application mobile Mindlet est développée avec **React Native** et **Expo**,
 
 ## Architecture du code
 
+<MermaidDownload title="Structure React Native">
 ```mermaid
 flowchart TD
     subgraph src["📁 src"]
@@ -58,6 +60,7 @@ flowchart TD
     style app fill:#e8f5e9,stroke:#388e3c
     style components fill:#fff3e0,stroke:#f57c00
 ```
+</MermaidDownload>
 
 ## Captures d'écran
 

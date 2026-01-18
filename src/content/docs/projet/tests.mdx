@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # ✅ Tests et qualité
 
@@ -20,6 +21,7 @@ import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/component
 
 Notre stratégie de tests repose sur la pyramide des tests :
 
+<MermaidDownload title="Pyramide des tests">
 ```mermaid
 flowchart TB
     subgraph Pyramid[" "]
@@ -36,6 +38,7 @@ flowchart TB
     style Unit fill:#c8e6c9,stroke:#2e7d32
     style Pyramid fill:transparent,stroke:transparent
 ```
+</MermaidDownload>
 
 ## Tests Backend (Laravel)
 

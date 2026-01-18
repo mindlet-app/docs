@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 👥 Équipe et organisation
 
@@ -67,6 +68,7 @@ Nous utilisons **GitHub** pour l'hébergement de notre code source :
 
 **GitHub Projects** pour la planification et le suivi :
 
+<MermaidDownload title="Kanban Board">
 ```mermaid
 flowchart LR
     subgraph Backlog["📋 Backlog"]
@@ -98,6 +100,7 @@ flowchart LR
     style InProgress fill:#e3f2fd,stroke:#1976d2
     style Done fill:#e8f5e9,stroke:#388e3c
 ```
+</MermaidDownload>
 
 ### Workflow Git
 
@@ -190,6 +193,7 @@ Nous faisons partie des **30 lauréats nationaux** du concours PEPITE France, ce
 
 ## Chronologie du projet
 
+<MermaidDownload title="Chronologie Mindlet">
 ```mermaid
 gantt
     title Chronologie Mindlet
@@ -208,6 +212,7 @@ gantt
     Pivot B2B & Stabilisation   :2026-01, 1M
     Objectif V1 stable          :2026-02, 1M
 ```
+</MermaidDownload>
 
 ## Leçons apprises
 

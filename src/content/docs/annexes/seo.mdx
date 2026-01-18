@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🔍 SEO et site web
 
@@ -97,6 +98,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 ### Structure des URLs
 
+<MermaidDownload title="Structure URLs mindlet.app">
 ```mermaid
 flowchart TD
     subgraph Site["🌐 mindlet.app"]
@@ -133,6 +135,7 @@ flowchart TD
     style Blog fill:#e3f2fd,stroke:#1976d2
     style Legal fill:#fff3e0,stroke:#f57c00
 ```
+</MermaidDownload>
 
 ### Contenu optimisé
 

@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🔒 Sécurité et protection des données
 
@@ -29,6 +30,7 @@ Mindlet manipule des données sensibles (contenus éducatifs personnels, donnée
 
 Toutes les communications sont chiffrées :
 
+<MermaidDownload title="Communication TLS">
 ```mermaid
 flowchart LR
     subgraph Mobile["📱 Mobile App"]
@@ -44,6 +46,7 @@ flowchart LR
     style Mobile fill:#e3f2fd,stroke:#1976d2
     style Backend fill:#e8f5e9,stroke:#388e3c
 ```
+</MermaidDownload>
 
 **Configuration :**
 - Protocole : **TLS 1.3** (minimum TLS 1.2)

@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🤖 Service Intelligence Artificielle
 
@@ -74,6 +75,7 @@ Nous avons choisi **Mistral AI** comme provider principal pour plusieurs raisons
 
 Le système est composé de **3 graphes LangGraph** principaux qui orchestrent le traitement :
 
+<MermaidDownload title="Architecture Mindlet AI">
 ```mermaid
 flowchart TB
     subgraph "Mindlet AI Platform"
@@ -97,6 +99,7 @@ flowchart TB
     BEG --> OUTPUT
     CGG --> OUTPUT
 ```
+</MermaidDownload>
 
 ## Les 3 graphes principaux
 
@@ -116,6 +119,7 @@ Le système est organisé autour de **3 graphes LangGraph** qui collaborent pour
 
 ### Flux de données entre les graphes
 
+<MermaidDownload title="Flux de données">
 ```mermaid
 flowchart LR
     A["📄 Ressource brute"] --> B["🔄 Embedding Graph"]
@@ -134,6 +138,7 @@ flowchart LR
     style F fill:#e3f2fd,stroke:#1976d2
     style G fill:#fff3e0,stroke:#f57c00
 ```
+</MermaidDownload>
 
 <Aside type="note" title="Qu'est-ce qu'un chunk ?">
   Un **chunk** est un segment de texte de taille contrôlée (512 tokens dans notre cas) accompagné de son **embedding** (vecteur de 1024 dimensions). Le chunking permet de traiter de longs documents tout en préservant le contexte sémantique.
@@ -195,6 +200,7 @@ Quelle que soit la source, le contenu suit toujours ces étapes. Ce pipeline uni
 
 ## Diagramme du Embedding Graph
 
+<MermaidDownload title="Embedding Graph">
 ```mermaid
 graph TD;
     __start__([__start__]):::first
@@ -232,6 +238,7 @@ graph TD;
     classDef first fill-opacity:0
     classDef last fill:#bfb6fc
 ```
+</MermaidDownload>
 
 ## Configuration et constantes
 

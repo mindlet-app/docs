@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs, FileTree } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🎴 Génération de cartes
 
@@ -35,12 +36,13 @@ Le système utilise **5 agents spécialisés** qui collaborent en boucle jusqu'�
 
 ### Le flux de collaboration
 
+<MermaidDownload title="Flux de collaboration des agents">
 ```mermaid
 flowchart LR
     A["📋 Planner"] --> B["✏️ Generator"]
     B --> C["🔍 Critic"]
     C -->|"Score < 7.5"| D["🔧 Refiner"]
-    D -->|"Réessayer"| B
+    D -->|"Éessayer"| B
     C -->|"Score ≥ 7.5"| E["✅ Finalizer"]
     D -->|"Max tentatives"| E
     
@@ -50,11 +52,13 @@ flowchart LR
     style D fill:#e8f5e9,stroke:#388e3c
     style E fill:#e0f7fa,stroke:#0097a7
 ```
+</MermaidDownload>
 
 ## Diagramme du Card Generator Graph
 
 Ce diagramme montre les **boucles de feedback** qui sont la clé de la qualité. Notez comment le `critic` peut renvoyer vers le `generator` (pour régénérer) ou vers le `refiner` (pour améliorer) :
 
+<MermaidDownload title="Card Generator Graph">
 ```mermaid
 graph TD;
     __start__([__start__]):::first
@@ -84,6 +88,7 @@ graph TD;
     classDef first fill-opacity:0
     classDef last fill:#bfb6fc
 ```
+</MermaidDownload>
 
 <Aside type="note" title="Les boucles de feedback">
   Les lignes pointillées depuis `critic` vers `generator` et `refiner` représentent les **boucles de feedback**. Si une carte n'atteint pas le score minimum de qualité (7.5/10), elle est soit améliorée (refiner), soit régénérée (generator). Ce processus peut se répéter jusqu'à 2 fois par carte.
@@ -93,6 +98,7 @@ graph TD;
 
 Le diagramme ci-dessous montre l'architecture interne avec les différents outils (tools) que chaque agent peut utiliser :
 
+<MermaidDownload title="Architecture agentic détaillée">
 ```mermaid
 flowchart TB
     subgraph AGENT["🤖 CARD GENERATION AGENT<br/>(mistral-medium-latest)"]
@@ -128,6 +134,7 @@ flowchart TB
     style FINALIZER fill:#e0f7fa,stroke:#0097a7
     style LOOP fill:#fafafa,stroke:#9e9e9e,stroke-dasharray: 5 5
 ```
+</MermaidDownload>
 
 ---
 
@@ -339,6 +346,7 @@ Le Refiner **améliore les cartes** qui n'ont pas atteint le score minimum. Il r
 
 Le Refiner améliore les cartes selon le feedback du Critic :
 
+<MermaidDownload title="Flux du Refiner">
 ```mermaid
 graph LR
     A[Carte originale] --> B{Score < 7.5?}
@@ -352,6 +360,7 @@ graph LR
     style C fill:#c8e6c9
     style H fill:#ffcdd2
 ```
+</MermaidDownload>
 
 ---
 

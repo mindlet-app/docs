@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 📊 Graphes LangGraph
 
@@ -78,6 +79,8 @@ Le graphe principal pour le traitement d'une **ressource unique**. C'est le grap
 ### Diagramme complet
 
 Ce diagramme montre tous les nodes et leurs connexions. Les lignes pointillées indiquent des **edges conditionnels** (le chemin dépend de l'état) :
+
+<MermaidDownload title="Embedding Graph complet">
 
 ```mermaid
 graph TD;
@@ -201,6 +204,7 @@ graph TD;
     classDef first fill-opacity:0
     classDef last fill:#bfb6fc
 ```
+</MermaidDownload>
 
 ### Comprendre le flux du graphe
 
@@ -321,6 +325,7 @@ Permet de traiter **plusieurs ressources** en une seule invocation. Chaque resso
 
 ### Diagramme
 
+<MermaidDownload title="Batch Embedding Graph">
 ```mermaid
 graph TD;
     __start__([__start__]):::first
@@ -337,9 +342,11 @@ graph TD;
     classDef first fill-opacity:0
     classDef last fill:#bfb6fc
 ```
+</MermaidDownload>
 
 ### Flux de traitement
 
+<MermaidDownload title="Flux Batch Sequence">
 ```mermaid
 sequenceDiagram
     participant Client
@@ -358,6 +365,7 @@ sequenceDiagram
     
     Aggregator->>Client: all_embedded_chunks + stats
 ```
+</MermaidDownload>
 
 ### État du graphe batch
 

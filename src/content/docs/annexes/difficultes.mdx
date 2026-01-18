@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🔧 Difficultés et retours d'expérience
 
@@ -52,6 +53,7 @@ La génération de cartes par l'IA prenait parfois plus de 30 secondes, causant 
 
 **Analyse :**
 
+<MermaidDownload title="Optimisation IA avant/après">
 ```mermaid
 flowchart LR
     subgraph Avant["❌ Avant optimisation ~30s"]
@@ -75,6 +77,7 @@ flowchart LR
     style A4 fill:#ef5350,stroke:#c62828
     style B4 fill:#66bb6a,stroke:#2e7d32
 ```
+</MermaidDownload>
 
 **Solutions implémentées :**
 <Steps>
@@ -244,6 +247,7 @@ Configuration de l'infrastructure Kubernetes sur OVHcloud.
 
 **Avant (Phase prototype) :**
 
+<MermaidDownload title="Méthodologie avant">
 ```mermaid
 flowchart LR
     A["💡 Idée"] --> B["💻 Code"]
@@ -257,9 +261,11 @@ flowchart LR
     style D fill:#ffcdd2,stroke:#c62828
     style E fill:#ef5350,stroke:#c62828,color:#fff
 ```
+</MermaidDownload>
 
 **Après (Phase actuelle) :**
 
+<MermaidDownload title="Méthodologie après">
 ```mermaid
 flowchart LR
     A["💡 Idée"] --> B["📋 Conception"]
@@ -281,6 +287,7 @@ flowchart LR
     style H fill:#c8e6c9,stroke:#2e7d32
     style I fill:#66bb6a,stroke:#2e7d32,color:#fff
 ```
+</MermaidDownload>
 
 ---
 

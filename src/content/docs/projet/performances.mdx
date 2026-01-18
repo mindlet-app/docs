@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 📊 Performances et scalabilité
 
@@ -29,6 +30,7 @@ import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/
     **Concurrence:** 50 utilisateurs  
     **Durée:** 60 secondes
 
+    <MermaidDownload title="Benchmark API">
     ```mermaid
     xychart-beta
         title "Résultats du benchmark API"
@@ -36,6 +38,7 @@ import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/
         y-axis "Valeur" 0 --> 500
         bar [450, 42, 156, 312]
     ```
+    </MermaidDownload>
 
     | Métrique | Valeur |
     |----------|--------|
@@ -51,12 +54,14 @@ import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/
     **Taille document:** 5000 mots  
     **Modèle:** GPT-4
 
+    <MermaidDownload title="Répartition temps de génération">
     ```mermaid
     pie showData
         title "Répartition du temps de génération"
         "Durée moyenne (8.2s)" : 82
         "Overhead (1.8s)" : 18
     ```
+    </MermaidDownload>
 
     | Métrique | Valeur |
     |----------|--------|

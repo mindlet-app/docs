@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 🔄 Pipelines de traitement
 
@@ -30,6 +31,7 @@ Les **pipelines de traitement** sont le premier maillon de la chaîne de transfo
 
 Le diagramme ci-dessous montre comment l'**input router** dirige chaque ressource vers son pipeline spécialisé, puis comment tous les contenus extraits convergent vers le **traitement commun** (chunking + embedding) :
 
+<MermaidDownload title="Vue d'ensemble des pipelines">
 ```mermaid
 flowchart TB
     subgraph "Input Router"
@@ -69,6 +71,7 @@ flowchart TB
     
     DETECT --> SPLIT --> CHUNK --> ENRICH --> EMBED
 ```
+</MermaidDownload>
 
 ### Comprendre le flux
 
@@ -86,6 +89,7 @@ Le pipeline le plus simple, pour le traitement de texte brut. C'est aussi le **p
   Ce pipeline est utilisé directement quand l'utilisateur colle du texte, mais il est aussi appelé indirectement par tous les autres pipelines une fois qu'ils ont extrait le contenu de leur source (PDF converti en texte, audio transcrit, etc.).
 </Aside>
 
+<MermaidDownload title="Pipeline Texte">
 ```mermaid
 graph LR
     A[text_input_check] --> B[detect_complex_content]
@@ -101,6 +105,7 @@ graph LR
     style G fill:#c8e6c9
     style H fill:#bfb6fc
 ```
+</MermaidDownload>
 
 ### Rôle de chaque node
 
@@ -150,6 +155,7 @@ Le pipeline PDF est le plus **sophistiqué** de tous car les PDFs présentent un
   Selon ces métriques, il choisit automatiquement entre parsing texte, OCR ou mode hybride.
 </Aside>
 
+<MermaidDownload title="Pipeline PDF">
 ```mermaid
 graph TB
     A[document_input_check] --> B[pdf_loader]
@@ -180,6 +186,7 @@ graph TB
     style E fill:#fff9c4
     style K fill:#c8e6c9
 ```
+</MermaidDownload>
 
 ### Stratégies de traitement PDF
 
@@ -246,6 +253,7 @@ class SplitStrategy(str, Enum):
 
 Utilise **Mistral Vision** pour générer une description textuelle de l'image.
 
+<MermaidDownload title="Pipeline Image">
 ```mermaid
 graph LR
     A[image_input_check] --> B[image_loader]
@@ -260,6 +268,7 @@ graph LR
     style D fill:#fff9c4
     style E fill:#ffcdd2
 ```
+</MermaidDownload>
 
 ### Nodes du Pipeline Image
 
@@ -289,6 +298,7 @@ graph LR
 
 Transcription audio via **Voxtral** avec découpage automatique pour les fichiers longs.
 
+<MermaidDownload title="Pipeline Audio">
 ```mermaid
 graph LR
     A[audio_input_check] --> B[audio_loader]
@@ -303,6 +313,7 @@ graph LR
     style D fill:#fff9c4
     style E fill:#ffcdd2
 ```
+</MermaidDownload>
 
 ### Nodes du Pipeline Audio
 
@@ -332,6 +343,7 @@ graph LR
 
 Récupère la transcription via l'API YouTube, avec **fallback** sur le téléchargement audio si indisponible.
 
+<MermaidDownload title="Pipeline YouTube">
 ```mermaid
 graph TB
     A[youtube_input_check] --> B{Transcription disponible?}
@@ -352,6 +364,7 @@ graph TB
     style D fill:#fff9c4
     style H fill:#ffcdd2
 ```
+</MermaidDownload>
 
 ### Stratégie YouTube
 
@@ -384,6 +397,7 @@ graph TB
 
 Crawl de sites web avec conversion en Markdown via **httpx** + **BeautifulSoup**.
 
+<MermaidDownload title="Pipeline Website">
 ```mermaid
 graph LR
     A[website_input_check] --> B[website_crawler]
@@ -396,6 +410,7 @@ graph LR
     style C fill:#c8e6c9
     style E fill:#ffcdd2
 ```
+</MermaidDownload>
 
 ### Nodes du Pipeline Website
 
