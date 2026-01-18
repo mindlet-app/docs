@@ -24,15 +24,21 @@ Notre architecture est composée de trois couches principales :
 <CardGrid>
   <Card title="Frontend" icon="laptop">
     **React Native** - Application mobile cross-platform (iOS & Android)
+    
+    [Voir la documentation →](/architecture/frontend/)
   </Card>
   <Card title="Backend API" icon="setting">
     **Laravel** - API RESTful robuste et scalable
+    
+    [Voir la documentation →](/architecture/backend/)
   </Card>
   <Card title="Service IA" icon="rocket">
-    **LangChain/LangGraph** - Orchestration des modèles de langage
+    **LangGraph + Mistral AI** - Traitement multimodal et génération de cartes
+    
+    [Voir la documentation →](/architecture/service-ia/)
   </Card>
   <Card title="Données" icon="document">
-    **PostgreSQL + Qdrant + MinIO** - Stockage relationnel, vectoriel et objets
+    **PostgreSQL + S3** - Stockage relationnel et objets
   </Card>
 </CardGrid>
 
@@ -84,10 +90,10 @@ Notre infrastructure est déployée sur des services cloud européens pour garan
     - Orchestration des services
     
     **Service IA :**
-    - Génération de contenu pédagogique
-    - Analyse sémantique des documents
-    - Création de questions/réponses
-    - Embeddings et analyse vectorielle
+    - Traitement multimodal (texte, PDF, image, audio, YouTube, web)
+    - Génération d'embeddings via Mistral AI
+    - Génération de cartes d'apprentissage (flashcards, QCM, etc.)
+    - Architecture agentic avec LangGraph
   </TabItem>
   
   <TabItem label="Données">

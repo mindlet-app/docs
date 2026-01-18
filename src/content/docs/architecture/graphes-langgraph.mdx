@@ -1,0 +1,492 @@
+---
+title: Graphes LangGraph
+description: Architecture détaillée des graphes d'embedding et de traitement batch
+sidebar:
+  order: 6
+---
+
+import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+# 📊 Graphes LangGraph
+
+<Badge text="LangGraph" variant="success" />
+<Badge text="StateGraph" variant="note" />
+<Badge text="Async" variant="caution" />
+
+Mindlet AI utilise **LangGraph** pour orchestrer le traitement des contenus. Cette page détaille l'architecture des graphes d'embedding.
+
+## Qu'est-ce que LangGraph ?
+
+**LangGraph** est un framework de LangChain pour construire des applications basées sur des **graphes d'états**. Il permet de :
+
+- Définir des **nœuds** (nodes) qui effectuent des opérations
+- Connecter les nœuds par des **arêtes** (edges) conditionnelles ou non
+- Gérer un **état partagé** qui traverse le graphe
+- Implémenter des **boucles** et de la **récursivité**
+
+<Aside type="tip">
+  Contrairement aux chaînes LangChain classiques qui sont linéaires, LangGraph permet de créer des workflows complexes avec des branchements et des boucles.
+</Aside>
+
+---
+
+## Embedding Graph
+
+Le graphe principal pour le traitement d'une **ressource unique**. Il détecte automatiquement le type d'input et route vers le pipeline approprié.
+
+### Diagramme complet
+
+```mermaid
+graph TD;
+    __start__([__start__]):::first
+    input_router(input_router)
+    audio_input_check(audio_input_check)
+    youtube_input_check(youtube_input_check)
+    image_input_check(image_input_check)
+    text_input_check(text_input_check)
+    website_input_check(website_input_check)
+    document_input_check(document_input_check)
+    detect_complex_content(detect_complex_content)
+    splitter_selection(splitter_selection)
+    splitter_application(splitter_application)
+    chunk_enrichment(chunk_enrichment)
+    embedding_generation(embedding_generation)
+    pdf_loader(pdf_loader)
+    pdf_cleaner(pdf_cleaner)
+    pdf_page_analyzer(pdf_page_analyzer)
+    pdf_processing_strategy(pdf_processing_strategy)
+    pdf_split_by_pages(pdf_split_by_pages)
+    pdf_split_by_size(pdf_split_by_size)
+    pdf_text_parser(pdf_text_parser)
+    pdf_ocr_processor(pdf_ocr_processor)
+    pdf_hybrid_processor(pdf_hybrid_processor)
+    pdf_content_merger(pdf_content_merger)
+    pdf_error_handler(pdf_error_handler)
+    image_loader(image_loader)
+    image_preprocessor(image_preprocessor)
+    image_vision_analyzer(image_vision_analyzer)
+    image_error_handler(image_error_handler)
+    audio_loader(audio_loader)
+    audio_splitter(audio_splitter)
+    audio_transcriber(audio_transcriber)
+    audio_error_handler(audio_error_handler)
+    youtube_transcript(youtube_transcript)
+    youtube_audio_download(youtube_audio_download)
+    youtube_error_handler(youtube_error_handler)
+    website_crawler(website_crawler)
+    website_content_cleaner(website_content_cleaner)
+    website_error_handler(website_error_handler)
+    __end__([__end__]):::last
+    
+    __start__ --> input_router;
+    input_router -.-> audio_input_check;
+    input_router -.-> document_input_check;
+    input_router -.-> image_input_check;
+    input_router -.-> text_input_check;
+    input_router -.-> website_input_check;
+    input_router -.-> youtube_input_check;
+    
+    audio_input_check --> audio_loader;
+    audio_loader -. continue .-> audio_splitter;
+    audio_loader -. error .-> audio_error_handler;
+    audio_splitter -. continue .-> audio_transcriber;
+    audio_splitter -. error .-> audio_error_handler;
+    audio_transcriber -. continue .-> detect_complex_content;
+    audio_transcriber -. error .-> audio_error_handler;
+    
+    document_input_check --> pdf_loader;
+    pdf_loader -. continue .-> pdf_cleaner;
+    pdf_loader -. error .-> pdf_error_handler;
+    pdf_cleaner -. continue .-> pdf_page_analyzer;
+    pdf_cleaner -. error .-> pdf_error_handler;
+    pdf_page_analyzer -. continue .-> pdf_processing_strategy;
+    pdf_page_analyzer -. error .-> pdf_error_handler;
+    pdf_processing_strategy -. split_pages .-> pdf_split_by_pages;
+    pdf_processing_strategy -. split_size .-> pdf_split_by_size;
+    pdf_processing_strategy -. parse_only .-> pdf_text_parser;
+    pdf_processing_strategy -. ocr_only .-> pdf_ocr_processor;
+    pdf_processing_strategy -. hybrid .-> pdf_hybrid_processor;
+    pdf_split_by_pages -. parse_only .-> pdf_text_parser;
+    pdf_split_by_pages -. ocr_only .-> pdf_ocr_processor;
+    pdf_split_by_pages -. hybrid .-> pdf_hybrid_processor;
+    pdf_split_by_size -. parse_only .-> pdf_text_parser;
+    pdf_split_by_size -. ocr_only .-> pdf_ocr_processor;
+    pdf_split_by_size -. hybrid .-> pdf_hybrid_processor;
+    pdf_text_parser --> pdf_content_merger;
+    pdf_ocr_processor --> pdf_content_merger;
+    pdf_hybrid_processor --> pdf_content_merger;
+    pdf_content_merger --> detect_complex_content;
+    
+    image_input_check --> image_loader;
+    image_loader -. continue .-> image_preprocessor;
+    image_loader -. error .-> image_error_handler;
+    image_preprocessor -. continue .-> image_vision_analyzer;
+    image_preprocessor -. error .-> image_error_handler;
+    image_vision_analyzer -. continue .-> detect_complex_content;
+    image_vision_analyzer -. error .-> image_error_handler;
+    
+    youtube_input_check -. continue .-> youtube_transcript;
+    youtube_input_check -. error .-> youtube_error_handler;
+    youtube_transcript -. chunking .-> detect_complex_content;
+    youtube_transcript -. fallback_audio .-> youtube_audio_download;
+    youtube_transcript -. error .-> youtube_error_handler;
+    youtube_audio_download -. continue .-> audio_splitter;
+    youtube_audio_download -. error .-> youtube_error_handler;
+    
+    website_input_check -. continue .-> website_crawler;
+    website_input_check -. error .-> website_error_handler;
+    website_crawler -. continue .-> website_content_cleaner;
+    website_crawler -. error .-> website_error_handler;
+    website_content_cleaner -. continue .-> detect_complex_content;
+    website_content_cleaner -. error .-> website_error_handler;
+    
+    text_input_check --> detect_complex_content;
+    detect_complex_content --> splitter_selection;
+    splitter_selection --> splitter_application;
+    splitter_application -. enrich .-> chunk_enrichment;
+    splitter_application -. skip .-> embedding_generation;
+    chunk_enrichment --> embedding_generation;
+    embedding_generation --> __end__;
+    
+    audio_error_handler --> __end__;
+    image_error_handler --> __end__;
+    pdf_error_handler --> __end__;
+    website_error_handler --> __end__;
+    youtube_error_handler --> __end__;
+    
+    classDef default fill:#f2f0ff,line-height:1.2
+    classDef first fill-opacity:0
+    classDef last fill:#bfb6fc
+```
+
+### État du graphe (EmbeddingState)
+
+```python
+class EmbeddingState(TypedDict):
+    """État principal qui traverse le graphe d'embedding"""
+    
+    # === Input ===
+    input_type: InputType              # Type d'input détecté
+    sentences: List[str]               # Pour TEXT
+    url_resource: str                  # Pour DOCUMENT, IMAGE, etc.
+    language: str                      # Langue du contenu
+    
+    # === Processing ===
+    extracted_content: str             # Contenu extrait
+    chunks: List[str]                  # Chunks après découpage
+    has_complex_content: bool          # Contenu complexe détecté
+    
+    # === PDF Specific ===
+    pdf_pages: List[Dict]              # Pages du PDF
+    processing_strategy: str           # Stratégie choisie
+    
+    # === Output ===
+    embedded_chunks: List[Dict]        # Chunks avec embeddings
+    error: Optional[str]               # Erreur éventuelle
+    
+    # === Metadata ===
+    total_tokens: int                  # Tokens traités
+    processing_time: float             # Temps de traitement
+    embedding_dimension: int           # Dimension (1024)
+```
+
+### Construction du graphe
+
+```python
+from langgraph.graph import StateGraph, END
+
+def create_embedding_graph():
+    """Construit le graphe d'embedding"""
+    
+    workflow = StateGraph(EmbeddingState)
+    
+    # === Nœuds principaux ===
+    workflow.add_node("input_router", input_router)
+    workflow.add_node("text_input_check", text_input_check)
+    workflow.add_node("detect_complex_content", detect_complex_content)
+    workflow.add_node("splitter_selection", splitter_selection)
+    workflow.add_node("splitter_application", splitter_application)
+    workflow.add_node("chunk_enrichment", chunk_enrichment)
+    workflow.add_node("embedding_generation", embedding_generation)
+    
+    # === Nœuds PDF ===
+    workflow.add_node("document_input_check", document_input_check)
+    workflow.add_node("pdf_loader", pdf_loader)
+    workflow.add_node("pdf_cleaner", pdf_cleaner)
+    # ... autres nœuds PDF
+    
+    # === Arêtes ===
+    workflow.add_edge("__start__", "input_router")
+    
+    # Routage conditionnel selon le type d'input
+    workflow.add_conditional_edges(
+        "input_router",
+        route_by_input_type,
+        {
+            "text": "text_input_check",
+            "document": "document_input_check",
+            "image": "image_input_check",
+            "audio": "audio_input_check",
+            "youtube": "youtube_input_check",
+            "website": "website_input_check",
+        }
+    )
+    
+    # Arête conditionnelle pour l'enrichissement
+    workflow.add_conditional_edges(
+        "splitter_application",
+        should_enrich,
+        {
+            "enrich": "chunk_enrichment",
+            "skip": "embedding_generation"
+        }
+    )
+    
+    workflow.add_edge("embedding_generation", END)
+    
+    return workflow.compile()
+
+# Export du graphe compilé
+graph = create_embedding_graph()
+```
+
+---
+
+## Batch Embedding Graph
+
+Permet de traiter **plusieurs ressources** en une seule invocation. Chaque ressource est traitée via le graphe d'embedding individuel puis les résultats sont agrégés.
+
+### Diagramme
+
+```mermaid
+graph TD;
+    __start__([__start__]):::first
+    validate_batch(validate_batch)
+    process_batch(process_batch)
+    __end__([__end__]):::last
+    
+    __start__ --> validate_batch;
+    validate_batch -. error .-> __end__;
+    validate_batch -. continue .-> process_batch;
+    process_batch --> __end__;
+    
+    classDef default fill:#f2f0ff,line-height:1.2
+    classDef first fill-opacity:0
+    classDef last fill:#bfb6fc
+```
+
+### Flux de traitement
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant BatchGraph
+    participant Validator
+    participant EmbeddingGraph
+    participant Aggregator
+    
+    Client->>BatchGraph: resources[]
+    BatchGraph->>Validator: validate_batch_input()
+    
+    loop Pour chaque ressource
+        Validator->>EmbeddingGraph: process(resource)
+        EmbeddingGraph-->>Aggregator: embedded_chunks
+    end
+    
+    Aggregator->>Client: all_embedded_chunks + stats
+```
+
+### État du graphe batch
+
+```python
+class ResourceInput(TypedDict):
+    """Définition d'une ressource à traiter"""
+    input_type: InputType
+    sentences: NotRequired[List[str]]  # Pour TEXT
+    url_resource: NotRequired[str]     # Pour DOCUMENT, IMAGE, etc.
+
+class BatchEmbeddingState(TypedDict):
+    """State pour le traitement par batch"""
+    resources: List[ResourceInput]           # Liste des ressources
+    processing_results: List[Dict]           # Résultats par ressource
+    all_embedded_chunks: List[Dict]          # Tous les chunks embeddés
+    total_chunks: int                        # Nombre total de chunks
+    processing_stats: Dict                   # Stats globales
+```
+
+### Construction du graphe batch
+
+```python
+def create_batch_embedding_graph():
+    """Construit le graphe de traitement batch"""
+    
+    workflow = StateGraph(BatchEmbeddingState)
+    
+    workflow.add_node("validate_batch", validate_batch_input)
+    workflow.add_node("process_batch", process_batch_resources)
+    
+    workflow.add_edge("__start__", "validate_batch")
+    workflow.add_conditional_edges(
+        "validate_batch",
+        check_validation,
+        {
+            "continue": "process_batch",
+            "error": END
+        }
+    )
+    workflow.add_edge("process_batch", END)
+    
+    return workflow.compile()
+
+batch_graph = create_batch_embedding_graph()
+```
+
+### Traitement parallèle
+
+Le nœud `process_batch` utilise `asyncio.gather` pour traiter les ressources en parallèle :
+
+```python
+async def process_batch_resources(state: BatchEmbeddingState) -> BatchEmbeddingState:
+    """Traite toutes les ressources en parallèle"""
+    
+    # Import du graphe d'embedding
+    from src.graphs.embedding import graph
+    
+    tasks = []
+    for resource in state["resources"]:
+        task = asyncio.create_task(
+            graph.ainvoke({
+                "input_type": resource["input_type"],
+                "sentences": resource.get("sentences"),
+                "url_resource": resource.get("url_resource"),
+                "language": state.get("language", "fr")
+            })
+        )
+        tasks.append(task)
+    
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Agrégation des résultats
+    all_chunks = []
+    processing_results = []
+    
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            processing_results.append({
+                "resource_index": i,
+                "status": "error",
+                "error": str(result)
+            })
+        else:
+            chunks = result.get("embedded_chunks", [])
+            all_chunks.extend(chunks)
+            processing_results.append({
+                "resource_index": i,
+                "status": "success",
+                "chunks_count": len(chunks)
+            })
+    
+    return {
+        **state,
+        "all_embedded_chunks": all_chunks,
+        "total_chunks": len(all_chunks),
+        "processing_results": processing_results,
+        "processing_stats": {
+            "total_resources": len(state["resources"]),
+            "successful": sum(1 for r in processing_results if r["status"] == "success"),
+            "failed": sum(1 for r in processing_results if r["status"] == "error")
+        }
+    }
+```
+
+---
+
+## Exemple d'utilisation
+
+<Tabs>
+  <TabItem label="Single Resource">
+    ```python
+    from src.graphs.embedding import graph
+    from src.models.input_type import InputType
+
+    # Traitement d'un texte
+    result = await graph.ainvoke({
+        "input_type": InputType.TEXT,
+        "sentences": [
+            "La photosynthèse est le processus...",
+            "Les plantes utilisent la lumière..."
+        ],
+        "language": "fr"
+    })
+
+    embedded_chunks = result["embedded_chunks"]
+    print(f"Chunks générés: {len(embedded_chunks)}")
+    ```
+  </TabItem>
+  
+  <TabItem label="Batch Resources">
+    ```python
+    from src.graphs.batch_embedding import batch_graph
+    from src.models.input_type import InputType
+
+    # Traitement de plusieurs ressources
+    result = await batch_graph.ainvoke({
+        "resources": [
+            {
+                "input_type": InputType.TEXT,
+                "sentences": ["Premier texte..."]
+            },
+            {
+                "input_type": InputType.DOCUMENT,
+                "url_resource": "s3://bucket/document.pdf"
+            },
+            {
+                "input_type": InputType.YOUTUBE,
+                "url_resource": "https://youtube.com/watch?v=xxx"
+            }
+        ],
+        "language": "fr"
+    })
+
+    all_chunks = result["all_embedded_chunks"]
+    stats = result["processing_stats"]
+    print(f"Total chunks: {len(all_chunks)}")
+    print(f"Succès: {stats['successful']}/{stats['total_resources']}")
+    ```
+  </TabItem>
+</Tabs>
+
+---
+
+## Structure du code
+
+```
+src/graphs/
+├── embedding.py         # 🎯 Graph principal (export: graph)
+├── batch_embedding.py   # 📦 Graph batch (export: batch_graph)
+└── states/
+    └── embedding_state.py  # États TypedDict
+```
+
+---
+
+## Avantages de LangGraph
+
+<CardGrid>
+  <Card title="Modularité" icon="puzzle">
+    Chaque nœud est une fonction indépendante, facile à tester et à maintenir.
+  </Card>
+  <Card title="Visibilité" icon="magnifier">
+    Les graphes sont visualisables, facilitant le debugging et la documentation.
+  </Card>
+  <Card title="Flexibilité" icon="random">
+    Les arêtes conditionnelles permettent des workflows complexes et adaptatifs.
+  </Card>
+  <Card title="Traçabilité" icon="list-format">
+    Chaque étape du traitement est loggée et peut être inspectée.
+  </Card>
+</CardGrid>
+
+---
+
+*Architecture LangGraph pour un traitement de contenu robuste et scalable.*

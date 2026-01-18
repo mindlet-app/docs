@@ -1,0 +1,113 @@
+flowchart TB
+    subgraph "📥 Sources d'entrée"
+        TEXT["📝 Texte"]
+        PDF["📄 PDF"]
+        IMG["🖼️ Image"]
+        AUDIO["🎵 Audio"]
+        YT["▶️ YouTube"]
+        WEB["🌐 Website"]
+    end
+
+    subgraph "🔄 Embedding Graph"
+        ROUTER["Input Router"]
+        
+        subgraph "Pipelines Spécialisés"
+            P_TEXT["Pipeline Texte"]
+            P_PDF["Pipeline PDF<br/>(Parser/OCR/Hybrid)"]
+            P_IMG["Pipeline Image<br/>(Mistral Vision)"]
+            P_AUDIO["Pipeline Audio<br/>(Voxtral)"]
+            P_YT["Pipeline YouTube<br/>(API/Fallback)"]
+            P_WEB["Pipeline Website<br/>(Crawler)"]
+        end
+        
+        subgraph "Traitement Commun"
+            DETECT["Détection<br/>Contenu Complexe"]
+            SPLIT["Sélection<br/>Splitter"]
+            CHUNK["Chunking<br/>512 tokens"]
+            ENRICH["Enrichissement<br/>LLM"]
+            EMBED["Génération<br/>Embeddings<br/>(mistral-embed)"]
+        end
+    end
+
+    subgraph "📦 Batch Graph"
+        BATCH["Traitement<br/>Parallèle"]
+        AGG["Agrégation<br/>Résultats"]
+    end
+
+    subgraph "🎴 Card Generator Graph"
+        subgraph "Agents"
+            PLANNER["🎯 Planner<br/>Planification"]
+            GEN["⚡ Generator<br/>Création"]
+            CRITIC["🔍 Critic<br/>Évaluation"]
+            REFINER["✨ Refiner<br/>Amélioration"]
+        end
+        FINAL["📋 Finalizer"]
+    end
+
+    subgraph "📤 Outputs"
+        CHUNKS["Chunks<br/>Embeddés"]
+        CARDS["Cartes<br/>d'apprentissage"]
+    end
+
+    %% Connexions Sources -> Router
+    TEXT --> ROUTER
+    PDF --> ROUTER
+    IMG --> ROUTER
+    AUDIO --> ROUTER
+    YT --> ROUTER
+    WEB --> ROUTER
+
+    %% Router -> Pipelines
+    ROUTER --> P_TEXT
+    ROUTER --> P_PDF
+    ROUTER --> P_IMG
+    ROUTER --> P_AUDIO
+    ROUTER --> P_YT
+    ROUTER --> P_WEB
+
+    %% Pipelines -> Traitement commun
+    P_TEXT --> DETECT
+    P_PDF --> DETECT
+    P_IMG --> DETECT
+    P_AUDIO --> DETECT
+    P_YT --> DETECT
+    P_WEB --> DETECT
+
+    %% Traitement commun
+    DETECT --> SPLIT
+    SPLIT --> CHUNK
+    CHUNK --> ENRICH
+    ENRICH --> EMBED
+    CHUNK -.-> EMBED
+
+    %% Batch
+    EMBED --> BATCH
+    BATCH --> AGG
+    AGG --> CHUNKS
+
+    %% Card Generation
+    CHUNKS --> PLANNER
+    PLANNER --> GEN
+    GEN --> CRITIC
+    CRITIC --> REFINER
+    CRITIC --> GEN
+    REFINER --> GEN
+    CRITIC --> FINAL
+    REFINER --> FINAL
+    FINAL --> CARDS
+
+    %% Single resource output
+    EMBED --> CHUNKS
+
+    %% Styles
+    classDef source fill:#e3f2fd,stroke:#1976d2
+    classDef pipeline fill:#fff3e0,stroke:#f57c00
+    classDef process fill:#e8f5e9,stroke:#388e3c
+    classDef agent fill:#fce4ec,stroke:#c2185b
+    classDef output fill:#f3e5f5,stroke:#7b1fa2
+
+    class TEXT,PDF,IMG,AUDIO,YT,WEB source
+    class P_TEXT,P_PDF,P_IMG,P_AUDIO,P_YT,P_WEB pipeline
+    class DETECT,SPLIT,CHUNK,ENRICH,EMBED,BATCH,AGG process
+    class PLANNER,GEN,CRITIC,REFINER,FINAL agent
+    class CHUNKS,CARDS output

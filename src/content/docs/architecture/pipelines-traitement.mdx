@@ -1,0 +1,444 @@
+---
+title: Pipelines de traitement
+description: Détails des pipelines de traitement multimodal (PDF, Image, Audio, YouTube, Website)
+sidebar:
+  order: 5
+---
+
+import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+# 🔄 Pipelines de traitement
+
+<Badge text="Multimodal" variant="success" />
+<Badge text="Mistral AI" variant="note" />
+
+Mindlet AI dispose de **6 pipelines spécialisés** pour traiter différents types de contenus. Chaque pipeline est optimisé pour extraire le maximum d'information de sa source.
+
+## Vue d'ensemble des pipelines
+
+```mermaid
+flowchart TB
+    subgraph "Input Router"
+        IR[input_router]
+    end
+    
+    subgraph "Pipelines Spécialisés"
+        TEXT[Pipeline Texte]
+        PDF[Pipeline PDF]
+        IMG[Pipeline Image]
+        AUDIO[Pipeline Audio]
+        YT[Pipeline YouTube]
+        WEB[Pipeline Website]
+    end
+    
+    subgraph "Traitement Commun"
+        DETECT[detect_complex_content]
+        SPLIT[splitter_selection]
+        CHUNK[splitter_application]
+        ENRICH[chunk_enrichment]
+        EMBED[embedding_generation]
+    end
+    
+    IR --> TEXT
+    IR --> PDF
+    IR --> IMG
+    IR --> AUDIO
+    IR --> YT
+    IR --> WEB
+    
+    TEXT --> DETECT
+    PDF --> DETECT
+    IMG --> DETECT
+    AUDIO --> DETECT
+    YT --> DETECT
+    WEB --> DETECT
+    
+    DETECT --> SPLIT --> CHUNK --> ENRICH --> EMBED
+```
+
+---
+
+## Pipeline Texte
+
+Le pipeline le plus simple, pour le traitement de texte brut.
+
+```mermaid
+graph LR
+    A[text_input_check] --> B[detect_complex_content]
+    B --> C[splitter_selection]
+    C --> D[splitter_application]
+    D --> E{Complex?}
+    E -->|Oui| F[chunk_enrichment]
+    E -->|Non| G[embedding_generation]
+    F --> G
+    G --> H[END]
+    
+    style A fill:#e1f5fe
+    style G fill:#c8e6c9
+    style H fill:#bfb6fc
+```
+
+### Nodes du Pipeline Texte
+
+| Node | Responsabilité |
+|------|----------------|
+| `text_input_check` | Valide le texte d'entrée |
+| `detect_complex_content` | Détecte tables, code, formules |
+| `splitter_selection` | Choisit le splitter approprié |
+| `splitter_application` | Applique le chunking |
+| `chunk_enrichment` | Enrichit les chunks complexes via LLM |
+| `embedding_generation` | Génère les embeddings Mistral |
+
+### Détection de contenu complexe
+
+Le module `ContentComplexityDetector` analyse le texte pour identifier :
+
+- **Tables** : Structures tabulaires (Markdown, HTML)
+- **Code** : Blocs de code avec indentation ou syntaxe
+- **Formules** : Équations mathématiques (LaTeX, MathML)
+- **Listes structurées** : Listes à plusieurs niveaux
+
+---
+
+## Pipeline PDF
+
+Pipeline sophistiqué avec analyse de pages et stratégie de traitement adaptative.
+
+```mermaid
+graph TB
+    A[document_input_check] --> B[pdf_loader]
+    B --> C[pdf_cleaner]
+    C --> D[pdf_page_analyzer]
+    D --> E[pdf_processing_strategy]
+    
+    E -->|split_pages| F[pdf_split_by_pages]
+    E -->|split_size| G[pdf_split_by_size]
+    E -->|parse_only| H[pdf_text_parser]
+    E -->|ocr_only| I[pdf_ocr_processor]
+    E -->|hybrid| J[pdf_hybrid_processor]
+    
+    F --> H
+    F --> I
+    F --> J
+    G --> H
+    G --> I
+    G --> J
+    
+    H --> K[pdf_content_merger]
+    I --> K
+    J --> K
+    
+    K --> L[detect_complex_content]
+    
+    style A fill:#e1f5fe
+    style E fill:#fff9c4
+    style K fill:#c8e6c9
+```
+
+### Stratégies de traitement PDF
+
+```python
+class ProcessingStrategy(str, Enum):
+    """Stratégies de traitement PDF"""
+    PARSE_ONLY = "parse_only"           # Extraction textuelle uniquement
+    OCR_ONLY = "ocr_only"               # OCR uniquement (scans)
+    HYBRID = "hybrid"                   # Parsing + OCR selon les pages
+    SPLIT_THEN_PARSE = "split_then_parse"
+    SPLIT_THEN_OCR = "split_then_ocr"
+
+class SplitStrategy(str, Enum):
+    """Stratégies de découpage"""
+    BY_PAGES = "by_pages"   # Découpage par nombre de pages
+    BY_SIZE = "by_size"     # Découpage par taille
+```
+
+### Nodes du Pipeline PDF
+
+<Tabs>
+  <TabItem label="Chargement">
+    | Node | Responsabilité |
+    |------|----------------|
+    | `pdf_loader` | Chargement depuis S3 |
+    | `pdf_cleaner` | Nettoyage et normalisation |
+    | `pdf_page_analyzer` | Analyse de chaque page |
+  </TabItem>
+  
+  <TabItem label="Traitement">
+    | Node | Responsabilité |
+    |------|----------------|
+    | `pdf_processing_strategy` | Choix de la stratégie |
+    | `pdf_split_by_pages` | Découpage par pages |
+    | `pdf_split_by_size` | Découpage par taille |
+  </TabItem>
+  
+  <TabItem label="Extraction">
+    | Node | Responsabilité |
+    |------|----------------|
+    | `pdf_text_parser` | Parsing texte natif |
+    | `pdf_ocr_processor` | OCR avec Mistral |
+    | `pdf_hybrid_processor` | Combinaison parsing + OCR |
+    | `pdf_content_merger` | Fusion du contenu extrait |
+  </TabItem>
+</Tabs>
+
+### Limites PDF
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Taille max | 50 MB |
+| Pages max | 1000 |
+| Modèle OCR | mistral-ocr-latest |
+
+---
+
+## Pipeline Image
+
+Utilise **Mistral Vision** pour générer une description textuelle de l'image.
+
+```mermaid
+graph LR
+    A[image_input_check] --> B[image_loader]
+    B -->|error| E[image_error_handler]
+    B -->|continue| C[image_preprocessor]
+    C -->|error| E
+    C -->|continue| D[image_vision_analyzer]
+    D -->|error| E
+    D -->|continue| F[detect_complex_content]
+    
+    style A fill:#e1f5fe
+    style D fill:#fff9c4
+    style E fill:#ffcdd2
+```
+
+### Nodes du Pipeline Image
+
+| Node | Responsabilité |
+|------|----------------|
+| `image_loader` | Chargement depuis S3 |
+| `image_preprocessor` | Redimensionnement et optimisation |
+| `image_vision_analyzer` | Analyse avec Mistral Vision |
+| `image_error_handler` | Gestion des erreurs |
+
+### Caractéristiques Image
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Modèle Vision | mistral-small-latest |
+| Taille max | 10 MB |
+| Résolution max | 1540x1540 |
+| Formats supportés | jpg, jpeg, png, webp, gif |
+
+<Aside type="tip">
+  Le préprocesseur redimensionne automatiquement les images trop grandes pour respecter les limites de l'API Mistral Vision.
+</Aside>
+
+---
+
+## Pipeline Audio
+
+Transcription audio via **Voxtral** avec découpage automatique pour les fichiers longs.
+
+```mermaid
+graph LR
+    A[audio_input_check] --> B[audio_loader]
+    B -->|error| E[audio_error_handler]
+    B -->|continue| C[audio_splitter]
+    C -->|error| E
+    C -->|continue| D[audio_transcriber]
+    D -->|error| E
+    D -->|continue| F[detect_complex_content]
+    
+    style A fill:#e1f5fe
+    style D fill:#fff9c4
+    style E fill:#ffcdd2
+```
+
+### Nodes du Pipeline Audio
+
+| Node | Responsabilité |
+|------|----------------|
+| `audio_loader` | Chargement depuis S3 |
+| `audio_splitter` | Découpage en segments ≤ 15 min |
+| `audio_transcriber` | Transcription avec Voxtral |
+| `audio_error_handler` | Gestion des erreurs |
+
+### Caractéristiques Audio
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Modèle | voxtral-mini-latest |
+| Durée max par segment | 15 minutes |
+| Formats supportés | wav, mp3, m4a, flac, ogg |
+| Découpage automatique | Si > 15 min |
+
+<Aside type="note">
+  Les fichiers audio de plus de 15 minutes sont automatiquement découpés en segments pour respecter les limites de l'API Voxtral.
+</Aside>
+
+---
+
+## Pipeline YouTube
+
+Récupère la transcription via l'API YouTube, avec **fallback** sur le téléchargement audio si indisponible.
+
+```mermaid
+graph TB
+    A[youtube_input_check] --> B{Transcription disponible?}
+    B -->|Oui| C[youtube_transcript]
+    B -->|Non| D[youtube_audio_download]
+    C -->|success| E[detect_complex_content]
+    C -->|fallback| D
+    D --> F[audio_splitter]
+    F --> G[audio_transcriber]
+    G --> E
+    
+    A -->|error| H[youtube_error_handler]
+    C -->|error| H
+    D -->|error| H
+    
+    style A fill:#e1f5fe
+    style C fill:#c8e6c9
+    style D fill:#fff9c4
+    style H fill:#ffcdd2
+```
+
+### Stratégie YouTube
+
+<Steps>
+1. **Tentative API**
+   - Récupération de la transcription via YouTubeTranscriptApi
+   - Utilisation de proxy Webshare (IPs résidentielles)
+
+2. **Fallback Audio** (si transcription indisponible)
+   - Téléchargement de l'audio de la vidéo
+   - Routage vers le pipeline audio standard
+</Steps>
+
+### Nodes du Pipeline YouTube
+
+| Node | Responsabilité |
+|------|----------------|
+| `youtube_input_check` | Validation de l'URL YouTube |
+| `youtube_transcript` | Récupération via API |
+| `youtube_audio_download` | Téléchargement audio (fallback) |
+| `youtube_error_handler` | Gestion des erreurs |
+
+<Aside type="caution">
+  Certaines vidéos YouTube n'ont pas de transcription disponible. Dans ce cas, le système télécharge automatiquement l'audio et le transcrit avec Voxtral.
+</Aside>
+
+---
+
+## Pipeline Website
+
+Crawl de sites web avec conversion en Markdown via **httpx** + **BeautifulSoup**.
+
+```mermaid
+graph LR
+    A[website_input_check] --> B[website_crawler]
+    B -->|error| E[website_error_handler]
+    B -->|continue| C[website_content_cleaner]
+    C -->|error| E
+    C -->|continue| D[detect_complex_content]
+    
+    style A fill:#e1f5fe
+    style C fill:#c8e6c9
+    style E fill:#ffcdd2
+```
+
+### Nodes du Pipeline Website
+
+| Node | Responsabilité |
+|------|----------------|
+| `website_input_check` | Validation de l'URL |
+| `website_crawler` | Crawl avec httpx |
+| `website_content_cleaner` | Nettoyage HTML → Markdown |
+| `website_error_handler` | Gestion des erreurs |
+
+### Caractéristiques Website
+
+| Caractéristique | Détail |
+|-----------------|--------|
+| **Compatible serverless** | Pas de navigateur requis |
+| **Proxy Webshare** | IPs résidentielles pour éviter les blocages |
+| **Conversion Markdown** | html2text pour un texte structuré |
+| **User-Agent rotatif** | Plusieurs UA réalistes |
+
+<Aside type="tip">
+  Le pipeline website est optimisé pour les environnements serverless et n'utilise pas de navigateur headless (Puppeteer, Playwright) pour des raisons de performance et de compatibilité.
+</Aside>
+
+---
+
+## Traitement commun
+
+Après l'extraction du contenu par chaque pipeline, le traitement commun s'applique :
+
+### 1. Détection de complexité
+
+```python
+class ContentComplexityDetector:
+    """Détecte le contenu complexe nécessitant un traitement spécial"""
+    
+    def detect(self, text: str) -> ComplexityResult:
+        return ComplexityResult(
+            has_tables=self._detect_tables(text),
+            has_code=self._detect_code(text),
+            has_formulas=self._detect_formulas(text),
+            has_lists=self._detect_structured_lists(text)
+        )
+```
+
+### 2. Sélection du splitter
+
+Le système choisit automatiquement le meilleur splitter :
+
+| Type de contenu | Splitter utilisé |
+|-----------------|------------------|
+| Texte simple | RecursiveCharacterTextSplitter |
+| Code | CodeTextSplitter |
+| Markdown | MarkdownTextSplitter |
+| Contenu mixte | Combinaison intelligente |
+
+### 3. Chunking
+
+```python
+CHUNK_SIZE = 512              # Taille cible en tokens
+CHUNK_OVERLAP_PERCENT = 0.15  # 15% de chevauchement
+CHUNK_OVERLAP = 77            # ~77 tokens
+```
+
+### 4. Enrichissement (optionnel)
+
+Pour les chunks contenant du contenu complexe, un enrichissement LLM est appliqué pour préserver le contexte sémantique.
+
+### 5. Génération d'embeddings
+
+```python
+EMBEDDING_MODEL = "mistral-embed"
+EMBEDDING_DIMENSION = 1024
+EMBEDDING_BATCH_SIZE = 50
+```
+
+---
+
+## Gestion des erreurs
+
+Chaque pipeline dispose d'un **error handler** dédié qui :
+
+- Capture les exceptions spécifiques au type de contenu
+- Génère des messages d'erreur explicites
+- Permet la continuation du traitement des autres ressources en mode batch
+
+```python
+class PipelineError(Exception):
+    """Erreur générique de pipeline"""
+    def __init__(self, message: str, pipeline: str, details: dict = None):
+        self.message = message
+        self.pipeline = pipeline
+        self.details = details or {}
+```
+
+---
+
+*Pipelines de traitement multimodal pour une extraction de contenu optimale.*
