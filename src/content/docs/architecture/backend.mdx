@@ -34,25 +34,31 @@ Le backend de Mindlet est une **API RESTful** développée avec **Laravel 12**, 
 
 ## Architecture du code
 
-```
-app
-├── Dtos
-├── Enums
-├── Events
-├── Exceptions
-├── Filament
-├── Http
-│   ├── Controllers
-│   ├── Middleware
-│   ├── Requests
-│   └── Resources
-├── Jobs
-├── Listeners
-├── Models
-├── Notifications
-├── Policies
-├── Providers
-└── Services
+```mermaid
+flowchart TD
+    subgraph app["📁 app"]
+        Dtos[Dtos]
+        Enums[Enums]
+        Events[Events]
+        Exceptions[Exceptions]
+        Filament[Filament]
+        subgraph Http["📁 Http"]
+            Controllers[Controllers]
+            Middleware[Middleware]
+            Requests[Requests]
+            Resources[Resources]
+        end
+        Jobs[Jobs]
+        Listeners[Listeners]
+        Models[Models]
+        Notifications[Notifications]
+        Policies[Policies]
+        Providers[Providers]
+        Services[Services]
+    end
+    
+    style app fill:#f5f5f5,stroke:#333
+    style Http fill:#e3f2fd,stroke:#1976d2
 ```
 
 ## Principes d'architecture

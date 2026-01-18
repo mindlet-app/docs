@@ -35,10 +35,20 @@ Le système utilise **5 agents spécialisés** qui collaborent en boucle jusqu'�
 
 ### Le flux de collaboration
 
-```
-Planner → Generator → Critic → Refiner ↺ (boucle si qualité insuffisante)
-                          ↓
-                     Finalizer
+```mermaid
+flowchart LR
+    A["📋 Planner"] --> B["✏️ Generator"]
+    B --> C["🔍 Critic"]
+    C -->|"Score < 7.5"| D["🔧 Refiner"]
+    D -->|"Réessayer"| B
+    C -->|"Score ≥ 7.5"| E["✅ Finalizer"]
+    D -->|"Max tentatives"| E
+    
+    style A fill:#e3f2fd,stroke:#1976d2
+    style B fill:#fff3e0,stroke:#f57c00
+    style C fill:#fce4ec,stroke:#c2185b
+    style D fill:#e8f5e9,stroke:#388e3c
+    style E fill:#e0f7fa,stroke:#0097a7
 ```
 
 ## Diagramme du Card Generator Graph

@@ -97,18 +97,41 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 ### Structure des URLs
 
-```
-mindlet.app/
-├── /                      # Page d'accueil
-├── /features/             # Fonctionnalités
-├── /pricing/              # Tarifs
-├── /blog/                 # Articles de blog
-│   └── /blog/[slug]/      # Article individuel
-├── /about/                # À propos
-├── /contact/              # Contact
-└── /legal/                # Mentions légales
-    ├── /legal/privacy/    # Politique de confidentialité
-    └── /legal/terms/      # CGU
+```mermaid
+flowchart TD
+    subgraph Site["🌐 mindlet.app"]
+        Home["/  Page d'accueil"]
+        Features["/features/  Fonctionnalités"]
+        Pricing["/pricing/  Tarifs"]
+        
+        subgraph Blog["📝 /blog/"]
+            BlogIndex["/blog/  Articles"]
+            BlogPost["/blog/[slug]/  Article"]
+        end
+        
+        About["/about/  À propos"]
+        Contact["/contact/  Contact"]
+        
+        subgraph Legal["⚖️ /legal/"]
+            LegalIndex["/legal/  Mentions légales"]
+            Privacy["/legal/privacy/  Confidentialité"]
+            Terms["/legal/terms/  CGU"]
+        end
+    end
+    
+    Home --> Features
+    Home --> Pricing
+    Home --> Blog
+    Home --> About
+    Home --> Contact
+    Home --> Legal
+    BlogIndex --> BlogPost
+    LegalIndex --> Privacy
+    LegalIndex --> Terms
+    
+    style Site fill:#f5f5f5,stroke:#333
+    style Blog fill:#e3f2fd,stroke:#1976d2
+    style Legal fill:#fff3e0,stroke:#f57c00
 ```
 
 ### Contenu optimisé

@@ -33,22 +33,30 @@ L'application mobile Mindlet est développée avec **React Native** et **Expo**,
 
 ## Architecture du code
 
-```
-src/
-├── app/                     # Écrans (file-based routing)
-│   ├── (auth)/              # Écrans authentification
-│   ├── (tabs)/              # Navigation principale
-│   └── _layout.tsx          # Layout racine
-├── components/              # Composants réutilisables
-│   ├── ui/                  # Composants UI de base
-│   ├── cards/               # Composants liés aux cartes
-│   └── collections/         # Composants collections
-├── hooks/                   # Custom hooks
-├── services/                # Services API
-├── stores/                  # Stores Zustand
-├── types/                   # Types TypeScript
-├── utils/                   # Utilitaires
-└── constants/               # Constantes
+```mermaid
+flowchart TD
+    subgraph src["📁 src"]
+        subgraph app["📁 app - Écrans file-based routing"]
+            auth["(auth) - Authentification"]
+            tabs["(tabs) - Navigation principale"]
+            layout["_layout.tsx - Layout racine"]
+        end
+        subgraph components["📁 components - Réutilisables"]
+            ui["ui/ - Composants UI de base"]
+            cards["cards/ - Composants cartes"]
+            collections["collections/ - Composants collections"]
+        end
+        hooks["📁 hooks - Custom hooks"]
+        services["📁 services - Services API"]
+        stores["📁 stores - Stores Zustand"]
+        types["📁 types - Types TypeScript"]
+        utils["📁 utils - Utilitaires"]
+        constants["📁 constants - Constantes"]
+    end
+    
+    style src fill:#f5f5f5,stroke:#333
+    style app fill:#e8f5e9,stroke:#388e3c
+    style components fill:#fff3e0,stroke:#f57c00
 ```
 
 ## Captures d'écran

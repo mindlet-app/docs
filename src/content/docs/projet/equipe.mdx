@@ -67,14 +67,36 @@ Nous utilisons **GitHub** pour l'hébergement de notre code source :
 
 **GitHub Projects** pour la planification et le suivi :
 
-```
-┌─────────────┬─────────────┬─────────────┬─────────────┐
-│   Backlog   │  À faire    │  En cours   │    Fait     │
-├─────────────┼─────────────┼─────────────┼─────────────┤
-│ ○ Feature X │ ○ Bug fix   │ ● API auth  │ ✓ Setup     │
-│ ○ Feature Y │ ○ Tests     │ ● UI cards  │ ✓ CI/CD     │
-│ ○ Feature Z │             │             │ ✓ Deploy    │
-└─────────────┴─────────────┴─────────────┴─────────────┘
+```mermaid
+flowchart LR
+    subgraph Backlog["📋 Backlog"]
+        B1["○ Feature X"]
+        B2["○ Feature Y"]
+        B3["○ Feature Z"]
+    end
+    
+    subgraph Todo["📝 À faire"]
+        T1["○ Bug fix"]
+        T2["○ Tests"]
+    end
+    
+    subgraph InProgress["🔄 En cours"]
+        I1["● API auth"]
+        I2["● UI cards"]
+    end
+    
+    subgraph Done["✅ Fait"]
+        D1["✓ Setup"]
+        D2["✓ CI/CD"]
+        D3["✓ Deploy"]
+    end
+    
+    Backlog --> Todo --> InProgress --> Done
+    
+    style Backlog fill:#f5f5f5,stroke:#9e9e9e
+    style Todo fill:#fff3e0,stroke:#f57c00
+    style InProgress fill:#e3f2fd,stroke:#1976d2
+    style Done fill:#e8f5e9,stroke:#388e3c
 ```
 
 ### Workflow Git
@@ -168,20 +190,23 @@ Nous faisons partie des **30 lauréats nationaux** du concours PEPITE France, ce
 
 ## Chronologie du projet
 
-```
-Sept 2025  ──┬── Prototype M1 finalisé
-             │
-Oct 2025   ──┼── Début migration architecture
-             │
-Nov 2025   ──┼── Concours PEPITE France 🏆
-             │
-Déc 2025   ──┼── Lancement beta
-             │   Retours utilisateurs
-             │
-Jan 2026   ──┼── Pivot B2B
-             │   Stabilisation
-             │
-Fév 2026   ──┴── Objectif : V1 stable
+```mermaid
+gantt
+    title Chronologie Mindlet
+    dateFormat YYYY-MM
+    axisFormat %b %Y
+    
+    section Développement
+    Prototype M1 finalisé       :done, 2025-09, 1M
+    Migration architecture      :done, 2025-10, 1M
+    
+    section Événements
+    Concours PEPITE France 🏆   :milestone, 2025-11, 0d
+    
+    section Lancement
+    Beta & Retours utilisateurs :active, 2025-12, 1M
+    Pivot B2B & Stabilisation   :2026-01, 1M
+    Objectif V1 stable          :2026-02, 1M
 ```
 
 ## Leçons apprises

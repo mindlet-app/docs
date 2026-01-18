@@ -20,16 +20,21 @@ import { Aside, Badge, Steps, TabItem, Tabs } from '@astrojs/starlight/component
 
 Notre stratégie de tests repose sur la pyramide des tests :
 
-```
-           /\
-          /  \      Tests E2E (10%)
-         /----\     Scénarios utilisateur complets
-        /      \
-       /--------\   Tests d'intégration (20%)
-      /          \  Communication entre composants
-     /------------\
-    /              \ Tests unitaires (70%)
-   /----------------\ Fonctions et classes isolées
+```mermaid
+flowchart TB
+    subgraph Pyramid[" "]
+        direction TB
+        E2E["🌐 Tests E2E - 10%\nScénarios utilisateur complets"]
+        Integration["🔗 Tests d'intégration - 20%\nCommunication entre composants"]
+        Unit["⚙️ Tests unitaires - 70%\nFonctions et classes isolées"]
+    end
+    
+    E2E --> Integration --> Unit
+    
+    style E2E fill:#ffcdd2,stroke:#c62828
+    style Integration fill:#fff9c4,stroke:#f9a825
+    style Unit fill:#c8e6c9,stroke:#2e7d32
+    style Pyramid fill:transparent,stroke:transparent
 ```
 
 ## Tests Backend (Laravel)

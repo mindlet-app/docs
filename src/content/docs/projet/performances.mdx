@@ -25,32 +25,45 @@ import { Aside, Badge, Card, CardGrid, TabItem, Tabs } from '@astrojs/starlight/
 
 <Tabs>
   <TabItem label="API Backend">
+    **Endpoint:** `GET /api/v1/collections`  
+    **Concurrence:** 50 utilisateurs  
+    **Durée:** 60 secondes
+
+    ```mermaid
+    xychart-beta
+        title "Résultats du benchmark API"
+        x-axis ["Req/s", "Latence moy (ms)", "P95 (ms)", "P99 (ms)"]
+        y-axis "Valeur" 0 --> 500
+        bar [450, 42, 156, 312]
     ```
-    Endpoint: GET /api/v1/collections
-    Concurrency: 50 users
-    Duration: 60 seconds
-    
-    Results:
-    ├── Requests/sec: 450
-    ├── Avg latency: 42ms
-    ├── P95 latency: 156ms
-    ├── P99 latency: 312ms
-    └── Errors: 0%
-    ```
+
+    | Métrique | Valeur |
+    |----------|--------|
+    | Requêtes/sec | **450** |
+    | Latence moyenne | **42ms** |
+    | P95 latence | **156ms** |
+    | P99 latence | **312ms** |
+    | Erreurs | **0%** ✅ |
   </TabItem>
   
   <TabItem label="Génération IA">
+    **Opération:** Générer 10 cartes depuis un document  
+    **Taille document:** 5000 mots  
+    **Modèle:** GPT-4
+
+    ```mermaid
+    pie showData
+        title "Répartition du temps de génération"
+        "Durée moyenne (8.2s)" : 82
+        "Overhead (1.8s)" : 18
     ```
-    Operation: Generate 10 cards from document
-    Document size: 5000 words
-    Model: GPT-4
-    
-    Results:
-    ├── Avg duration: 8.2s
-    ├── Token usage: ~3500 tokens
-    ├── Cost per generation: ~$0.12
-    └── Success rate: 98%
-    ```
+
+    | Métrique | Valeur |
+    |----------|--------|
+    | Durée moyenne | **8.2s** |
+    | Tokens utilisés | **~3500** |
+    | Coût par génération | **~$0.12** |
+    | Taux de succès | **98%** ✅ |
   </TabItem>
 </Tabs>
 
