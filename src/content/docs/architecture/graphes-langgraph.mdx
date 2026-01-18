@@ -13,28 +13,71 @@ import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/sta
 <Badge text="StateGraph" variant="note" />
 <Badge text="Async" variant="caution" />
 
-Mindlet AI utilise **LangGraph** pour orchestrer le traitement des contenus. Cette page détaille l'architecture des graphes d'embedding.
+## Introduction
+
+Cette page détaille l'architecture technique des **graphes d'embedding** — le cœur du système qui transforme n'importe quel contenu en vecteurs exploitables. Si vous n'êtes pas familier avec LangGraph, lisez d'abord la section explicative ci-dessous.
 
 ## Qu'est-ce que LangGraph ?
 
-**LangGraph** est un framework de LangChain pour construire des applications basées sur des **graphes d'états**. Il permet de :
+**LangGraph** est un framework Python développé par l'équipe LangChain pour construire des applications IA basées sur des **graphes d'états**. Pensez-y comme une machine à états augmentée pour l'IA.
 
-- Définir des **nœuds** (nodes) qui effectuent des opérations
-- Connecter les nœuds par des **arêtes** (edges) conditionnelles ou non
-- Gérer un **état partagé** qui traverse le graphe
-- Implémenter des **boucles** et de la **récursivité**
+### Les concepts clés
 
-<Aside type="tip">
-  Contrairement aux chaînes LangChain classiques qui sont linéaires, LangGraph permet de créer des workflows complexes avec des branchements et des boucles.
+| Concept | Description | Analogie |
+|---------|-------------|----------|
+| **Node** | Une fonction Python qui transforme l'état | Une étape dans une recette de cuisine |
+| **Edge** | La connexion entre deux nodes | "Après l'étape A, faire l'étape B" |
+| **Conditional Edge** | Une connexion qui dépend de l'état | "Si le gâteau est cuit, sortir du four, sinon continuer" |
+| **State** | Un dictionnaire typé qui traverse le graphe | Les ingrédients qui évoluent à chaque étape |
+
+### Pourquoi LangGraph plutôt que des chaînes linéaires ?
+
+<Aside type="tip" title="L'avantage du graphe">
+  Une chaîne linéaire (A → B → C) ne permet pas de :
+  - **Brancher** : "Si le PDF est scanné, faire OCR, sinon parser le texte"
+  - **Boucler** : "Tant que la qualité est insuffisante, améliorer la carte"
+  - **Paralléliser** : "Traiter les 6 pipelines simultanément"
+  
+  LangGraph résout ces limitations avec une approche basée sur les graphes.
 </Aside>
+
+```python
+# Exemple conceptuel : un graphe LangGraph
+workflow = StateGraph(EmbeddingState)
+
+# Chaque node est une fonction pure qui prend l'état et le retourne modifié
+workflow.add_node("input_router", detect_input_type)
+workflow.add_node("text_pipeline", process_text)
+workflow.add_node("pdf_pipeline", process_pdf)
+
+# Les edges conditionnels permettent le branchement dynamique
+workflow.add_conditional_edges(
+    "input_router",
+    lambda state: state["input_type"],  # La fonction de routage
+    {"text": "text_pipeline", "document": "pdf_pipeline"}
+)
+
+graph = workflow.compile()  # Prêt à être invoqué !
+```
 
 ---
 
 ## Embedding Graph
 
-Le graphe principal pour le traitement d'une **ressource unique**. Il détecte automatiquement le type d'input et route vers le pipeline approprié.
+Le graphe principal pour le traitement d'une **ressource unique**. C'est le graphe que vous invoquez quand vous uploadez un fichier ou collez du texte.
+
+### Ce que fait ce graphe
+
+1. **Détecte** automatiquement le type d'input (PDF, image, audio, etc.)
+2. **Route** vers le pipeline spécialisé approprié
+3. **Extrait** le contenu textuel de la source
+4. **Découpe** le texte en chunks de taille optimale
+5. **Enrichit** les chunks complexes (optionnel, via LLM)
+6. **Génère** les embeddings vectoriels avec Mistral
 
 ### Diagramme complet
+
+Ce diagramme montre tous les nodes et leurs connexions. Les lignes pointillées indiquent des **edges conditionnels** (le chemin dépend de l'état) :
 
 ```mermaid
 graph TD;
@@ -159,32 +202,52 @@ graph TD;
     classDef last fill:#bfb6fc
 ```
 
+### Comprendre le flux du graphe
+
+Le graphe ci-dessus peut sembler complexe, mais il suit une logique simple :
+
+1. **Entrée** (`__start__`) → **Routeur** : Le graphe commence et détecte le type d'input
+2. **Routeur** → **Pipeline spécialisé** : Selon le type (text, document, image...), on branche
+3. **Pipeline** → **Traitement commun** : Après extraction, on rejoint le flux commun
+4. **Traitement commun** → **Sortie** : Chunking, enrichissement optionnel, embedding, fin
+
+<Aside type="note" title="Les lignes pointillées">
+  Dans le diagramme, les lignes pointillées (`-.->`) représentent des **edges conditionnels**. Par exemple, `splitter_application -. enrich .-> chunk_enrichment` signifie "si le contenu est complexe, aller vers l'enrichissement".
+</Aside>
+
 ### État du graphe (EmbeddingState)
+
+L'état est un **TypedDict** Python qui contient toutes les données qui traversent le graphe. Chaque node lit l'état, le modifie, et le retourne. Voici la structure complète avec des explications :
 
 ```python
 class EmbeddingState(TypedDict):
-    """État principal qui traverse le graphe d'embedding"""
+    """État principal qui traverse le graphe d'embedding.
     
-    # === Input ===
-    input_type: InputType              # Type d'input détecté
-    sentences: List[str]               # Pour TEXT
-    url_resource: str                  # Pour DOCUMENT, IMAGE, etc.
-    language: str                      # Langue du contenu
+    Cet état est passé de node en node. Chaque node peut lire et modifier
+    les champs dont il a besoin. LangGraph gère automatiquement la fusion
+    des modifications.
+    """
     
-    # === Processing ===
-    extracted_content: str             # Contenu extrait
-    chunks: List[str]                  # Chunks après découpage
-    has_complex_content: bool          # Contenu complexe détecté
+    # === Input (défini au départ) ===
+    input_type: InputType              # Type détecté par input_router
+    sentences: List[str]               # Si TEXT : les phrases à traiter
+    url_resource: str                  # Si DOCUMENT/IMAGE/etc : URL S3 de la ressource
+    language: str                      # Langue pour les prompts ("fr", "en"...)
     
-    # === PDF Specific ===
-    pdf_pages: List[Dict]              # Pages du PDF
-    processing_strategy: str           # Stratégie choisie
+    # === Processing (modifié pendant le traitement) ===
+    extracted_content: str             # Texte extrait de la source (rempli par le pipeline)
+    chunks: List[str]                  # Texte découpé en segments (après chunking)
+    has_complex_content: bool          # True si tables/code/formules détectés
     
-    # === Output ===
-    embedded_chunks: List[Dict]        # Chunks avec embeddings
-    error: Optional[str]               # Erreur éventuelle
+    # === PDF Specific (uniquement pour les PDFs) ===
+    pdf_pages: List[Dict]              # Métadonnées de chaque page
+    processing_strategy: str           # "parse_only", "ocr_only", "hybrid"
     
-    # === Metadata ===
+    # === Output (résultat final) ===
+    embedded_chunks: List[Dict]        # Les chunks avec leurs embeddings
+    error: Optional[str]               # Message d'erreur si échec
+    
+    # === Metadata (statistiques) ===
     total_tokens: int                  # Tokens traités
     processing_time: float             # Temps de traitement
     embedding_dimension: int           # Dimension (1024)

@@ -15,15 +15,47 @@ import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/sta
 
 ## Vue d'ensemble
 
-Le service IA est le cœur de Mindlet, une plateforme de traitement de contenu **multimodal** basée sur **LangGraph**. Elle permet de :
+Le service IA est le **cœur du traitement intelligent** de Mindlet. Son rôle principal est de transformer n'importe quel type de contenu (texte, PDF, images, audio, vidéos YouTube, sites web) en cartes d'apprentissage personnalisées et efficaces.
+
+### Ce que fait le service IA
 
 - 📝 **Extraire** du contenu depuis différentes sources (texte, PDF, images, audio, vidéos YouTube, sites web)
 - 🔢 **Générer des embeddings** vectoriels via Mistral AI
 - 🎴 **Créer des cartes d'apprentissage** intelligentes (flashcards, QCM, etc.)
 
-<Aside type="note">
-  Notre technologie d'IA propriétaire est capable d'analyser, comprendre et transformer n'importe quel contenu multimodal en outils d'apprentissage interactifs.
+<Aside type="tip" title="Pourquoi un service IA dédié ?">
+  Plutôt que d'intégrer l'IA directement dans le backend principal, nous avons choisi de créer un **microservice indépendant**. Cette architecture permet :
+  - Une **scalabilité horizontale** : le service IA peut être répliqué indépendamment selon la charge
+  - Une **isolation des dépendances** : les librairies ML lourdes ne polluent pas le backend principal
+  - Une **évolutivité** : on peut changer de modèle ou de provider sans impacter le reste du système
 </Aside>
+
+### Qu'est-ce que LangGraph ?
+
+**LangGraph** est un framework Python développé par LangChain pour créer des **workflows IA orchestrés sous forme de graphes**. Contrairement à une simple chaîne linéaire de prompts, LangGraph permet :
+
+- Des **branchements conditionnels** : le flux de traitement s'adapte dynamiquement au contenu
+- Des **boucles de feedback** : un agent peut critiquer et améliorer itérativement son travail
+- Une **gestion d'état explicite** : chaque étape reçoit et modifie un état typé (TypedDict)
+- Une **visualisation native** : les graphes sont exportables en Mermaid pour la documentation
+
+```python
+# Exemple simplifié : un graphe LangGraph se construit comme un DAG
+workflow = StateGraph(MyState)           # On définit l'état qui traverse le graphe
+workflow.add_node("etape1", fonction_1)  # Chaque node est une fonction Python
+workflow.add_node("etape2", fonction_2)
+workflow.add_edge("etape1", "etape2")    # Les edges connectent les nodes
+graph = workflow.compile()               # Le graphe compilé est invocable
+```
+
+### Pourquoi Mistral AI ?
+
+Nous avons choisi **Mistral AI** comme provider principal pour plusieurs raisons stratégiques :
+
+1. **Souveraineté européenne** : Mistral est une entreprise française, ce qui simplifie la conformité RGPD
+2. **Rapport qualité/prix** : Performances comparables à GPT-4 pour un coût significativement inférieur
+3. **Suite complète** : Un seul provider pour LLM, embeddings, OCR, vision et transcription audio
+4. **API consistante** : Toutes les APIs suivent le même pattern, simplifiant l'intégration
 
 ## Stack technique
 
@@ -68,33 +100,55 @@ flowchart TB
 
 ## Les 3 graphes principaux
 
+Le système est organisé autour de **3 graphes LangGraph** qui collaborent pour transformer du contenu brut en cartes d'apprentissage. Comprendre leurs responsabilités est essentiel pour appréhender l'architecture :
+
 <CardGrid>
-  <Card title="Embedding Graph" icon="document">
-    Traitement d'une ressource unique avec détection automatique du type d'input et routage vers le pipeline approprié.
+  <Card title="1. Embedding Graph" icon="document">
+    **Le transformateur de contenu.** Ce graphe prend une ressource unique (un PDF, une image, un audio...) et la convertit en "chunks" vectorisés. Il détecte automatiquement le type d'input et route vers le pipeline de traitement approprié.
   </Card>
-  <Card title="Batch Embedding Graph" icon="list-format">
-    Traitement de plusieurs ressources en une seule invocation avec agrégation des résultats.
+  <Card title="2. Batch Embedding Graph" icon="list-format">
+    **L'orchestrateur de masse.** Quand un utilisateur importe plusieurs ressources à la fois, ce graphe les traite en parallèle via asyncio puis agrège les résultats. Il utilise le graphe d'embedding individuel en interne.
   </Card>
-  <Card title="Card Generator Graph" icon="rocket">
-    Graphe agentic sophistiqué pour la génération intelligente de cartes d'apprentissage.
+  <Card title="3. Card Generator Graph" icon="rocket">
+    **Le créateur pédagogique.** C'est un graphe "agentic" sophistiqué composé de 5 agents (Planner, Generator, Critic, Refiner, Finalizer) qui collaborent pour produire des cartes d'apprentissage de haute qualité à partir des chunks vectorisés.
   </Card>
 </CardGrid>
 
+### Flux de données entre les graphes
+
+```
+Ressource brute → [Embedding Graph] → Chunks vectorisés → [Card Generator] → Cartes d'apprentissage
+                        ↑
+          [Batch Embedding Graph] ← Plusieurs ressources
+```
+
+<Aside type="note" title="Qu'est-ce qu'un chunk ?">
+  Un **chunk** est un segment de texte de taille contrôlée (512 tokens dans notre cas) accompagné de son **embedding** (vecteur de 1024 dimensions). Le chunking permet de traiter de longs documents tout en préservant le contexte sémantique.
+</Aside>
+
 ## Types d'input supportés
+
+Le système détecte automatiquement le type de contenu et applique le traitement approprié :
 
 ```python
 class InputType(str, Enum):
-    """Types d'input pour le graph embedding"""
-    AUDIO = "audio"       # Fichiers audio (mp3, wav, m4a, flac, ogg)
-    YOUTUBE = "youtube"   # URLs YouTube
-    DOCUMENT = "document" # PDFs
-    IMAGE = "image"       # Images (jpg, png, webp, gif)
-    WEBSITE = "website"   # URLs de sites web
-    TEXT = "text"         # Texte brut
-    VIDEO = "video"       # Fichiers vidéo (mp4, avi, mov, mkv, webm)
+    """Types d'input pour le graph embedding.
+    
+    Chaque type déclenche un pipeline de traitement spécifique
+    optimisé pour extraire le contenu de manière optimale.
+    """
+    TEXT = "text"         # Texte brut → chunking direct
+    DOCUMENT = "document" # PDFs → parsing texte ou OCR
+    IMAGE = "image"       # Images → description par vision IA
+    AUDIO = "audio"       # Fichiers audio → transcription
+    YOUTUBE = "youtube"   # URLs YouTube → récup transcription ou fallback audio
+    WEBSITE = "website"   # URLs web → crawl et conversion markdown
+    VIDEO = "video"       # Fichiers vidéo → extraction audio puis transcription
 ```
 
 ## Pipeline de traitement unifié
+
+Quelle que soit la source, le contenu suit toujours ces étapes. Ce pipeline unifié garantit une **qualité constante** des embeddings produits :
 
 <Steps>
 1. **Détection du type d'input**

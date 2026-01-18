@@ -13,23 +13,37 @@ import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs, FileTree } from '@a
 <Badge text="Mistral AI" variant="note" />
 <Badge text="Multi-types" variant="caution" />
 
-Le **Card Generator Graph** est un graphe **agentic** sophistiqué pour la génération intelligente de cartes d'apprentissage à partir des chunks embeddés.
+## Introduction
+
+Le **Card Generator Graph** est le composant le plus **complexe et innovant** du système. Contrairement à un simple appel LLM qui génère des cartes en une seule passe, nous utilisons une architecture **agentic** — c'est-à-dire un système où plusieurs agents IA collaborent et s'auto-corrigent.
+
+<Aside type="tip" title="Qu'est-ce qu'une architecture agentic ?">
+  Une architecture **agentic** est un design où plusieurs agents spécialisés travaillent ensemble vers un objectif commun. Chaque agent a une responsabilité précise (planifier, générer, critiquer, améliorer...) et ils communiquent via un état partagé. L'avantage ? La qualité finale est bien supérieure à une génération en une seule passe car les agents peuvent détecter et corriger les erreurs.
+</Aside>
 
 ## Vue d'ensemble
 
-Le système utilise une approche **agentic** avec plusieurs agents spécialisés qui collaborent :
+Le système utilise **5 agents spécialisés** qui collaborent en boucle jusqu'à atteindre la qualité souhaitée :
 
-- **Planner** : Analyse le contenu et planifie la stratégie de génération
-- **Generator** : Crée les cartes selon le plan
-- **Critic** : Évalue la qualité et la diversité
-- **Refiner** : Améliore les cartes selon le feedback
-- **Finalizer** : Génère les métadonnées et valide la collection
+| Agent | Rôle | Analogie |
+|-------|------|----------|
+| **Planner** 📋 | Analyse le contenu et crée une stratégie de génération | Le chef de projet qui fait le plan |
+| **Generator** ✏️ | Crée les cartes selon le plan établi | Le rédacteur qui écrit |
+| **Critic** 🔍 | Évalue chaque carte et détecte les problèmes | Le relecteur qui pointe les erreurs |
+| **Refiner** 🔧 | Améliore les cartes selon le feedback du Critic | Le correcteur qui améliore |
+| **Finalizer** ✅ | Valide et génère les métadonnées finales | Le responsable qualité qui approuve |
 
-<Aside type="note">
-  L'approche agentic permet au système de s'auto-corriger et d'optimiser la qualité des cartes générées de manière itérative.
-</Aside>
+### Le flux de collaboration
+
+```
+Planner → Generator → Critic → Refiner ↺ (boucle si qualité insuffisante)
+                          ↓
+                     Finalizer
+```
 
 ## Diagramme du Card Generator Graph
+
+Ce diagramme montre les **boucles de feedback** qui sont la clé de la qualité. Notez comment le `critic` peut renvoyer vers le `generator` (pour régénérer) ou vers le `refiner` (pour améliorer) :
 
 ```mermaid
 graph TD;
@@ -61,7 +75,13 @@ graph TD;
     classDef last fill:#bfb6fc
 ```
 
+<Aside type="note" title="Les boucles de feedback">
+  Les lignes pointillées depuis `critic` vers `generator` et `refiner` représentent les **boucles de feedback**. Si une carte n'atteint pas le score minimum de qualité (7.5/10), elle est soit améliorée (refiner), soit régénérée (generator). Ce processus peut se répéter jusqu'à 2 fois par carte.
+</Aside>
+
 ## Architecture agentic détaillée
+
+Le diagramme ci-dessous montre l'architecture interne avec les différents outils (tools) que chaque agent peut utiliser :
 
 ```mermaid
 flowchart TB
@@ -103,31 +123,46 @@ flowchart TB
 
 ## Types de cartes supportés
 
-Le système peut générer **9 types de cartes** différents :
+Le système peut générer **9 types de cartes** différents, chacun adapté à un style d'apprentissage particulier. Le **Planner** décide de la répartition optimale en fonction du contenu.
+
+<Aside type="tip" title="Comment le système choisit-il les types ?">
+  Le Planner analyse le contenu des chunks pour déterminer quels types sont pertinents :
+  - Contenu factuel → **Flashcards**, **Vrai/Faux**
+  - Contenu avec options → **QCM** avec distracteurs
+  - Contenu avec séquences → **Ranking**, **Drag & Drop**
+  - Contenu numérique → **Slider**
+  - Contenu géographique → **GeoGuess**
+</Aside>
 
 ```python
 class CardType(str, Enum):
-    """Types de cartes disponibles pour la génération"""
+    """Types de cartes disponibles pour la génération.
+    
+    Chaque type a un format de sortie spécifique et une difficulté
+    de génération différente (reflétée dans le nombre de tokens).
+    """
     FLASHCARD = "flashcard"          # Question/Réponse classique
-    MCQ = "mcq"                      # QCM (Questions à Choix Multiples)
-    FREE_TEXT = "free_text"          # Réponse libre
-    TRUE_OR_FALSE = "true_or_false"  # Vrai ou Faux
-    MATCH_PAIR = "match_pair"        # Correspondance
-    SLIDER = "slider"                # Curseur numérique
-    DRAG_AND_DROP = "drag_and_drop"  # Glisser-déposer
-    RANKING = "ranking"              # Classement
-    GEO_GUESS = "geo_guess"          # Géolocalisation
+    MCQ = "mcq"                      # QCM avec distracteurs intelligents
+    FREE_TEXT = "free_text"          # Réponse libre évaluée par mots-clés
+    TRUE_OR_FALSE = "true_or_false"  # Affirmation à valider
+    MATCH_PAIR = "match_pair"        # Correspondance terme ↔ définition
+    SLIDER = "slider"                # Estimation numérique
+    DRAG_AND_DROP = "drag_and_drop"  # Placement dans des catégories
+    RANKING = "ranking"              # Classement par ordre
+    GEO_GUESS = "geo_guess"          # Localisation sur une carte
 ```
+
+### Présentation des types de cartes
 
 <CardGrid>
   <Card title="Flashcard" icon="document">
-    Question/réponse simple pour la mémorisation rapide.
+    **Question/réponse classique** pour la mémorisation rapide. Le format le plus simple et le plus efficace pour le rappel actif.
   </Card>
   <Card title="QCM" icon="list-format">
-    Question à choix multiples avec distracteurs intelligents.
+    **Question à choix multiples** avec distracteurs intelligents. Le système génère des options plausibles mais incorrectes pour tester la compréhension.
   </Card>
   <Card title="Vrai/Faux" icon="approve-check">
-    Affirmation à valider avec explication détaillée.
+    **Affirmation à valider** avec explication détaillée. Idéal pour corriger les idées reçues.
   </Card>
   <Card title="Match Pair" icon="puzzle">
     Relier des éléments correspondants entre eux.
@@ -185,22 +220,35 @@ class CardType(str, Enum):
 
 ## Agents du système
 
-### Planner Agent
+Chaque agent a un **rôle précis** et utilise un **prompt YAML** dédié. Voici comment ils fonctionnent en détail :
 
-Le Planner analyse le contenu et crée un plan de génération :
+### Planner Agent 📋
+
+Le Planner est le **stratège** du système. Il analyse les chunks et décide :
+- Combien de cartes de chaque type générer
+- Quels sujets prioriser
+- Quelle courbe de difficulté adopter
 
 ```python
 class GenerationPlan(BaseModel):
-    """Plan de génération des cartes"""
-    card_distribution: Dict[CardType, int]  # Répartition par type
-    focus_topics: List[str]                  # Sujets prioritaires
-    difficulty_curve: List[int]              # Progression difficulté
-    reasoning: str                           # Explication du plan
+    """Plan de génération créé par le Planner.
+    
+    Ce plan guide le Generator pour produire des cartes équilibrées
+    et adaptées au contenu source.
+    """
+    card_distribution: Dict[CardType, int]  # Ex: {FLASHCARD: 5, MCQ: 3}
+    focus_topics: List[str]                  # Sujets identifiés à couvrir
+    difficulty_curve: List[int]              # [1, 2, 2, 3, 3, 4] = progression
+    reasoning: str                           # Explication (pour le debug)
 ```
 
-### Generator Agent
+<Aside type="note" title="Pourquoi un Planner ?">
+  Sans planification, le Generator produirait des cartes de manière aléatoire. Le Planner assure une **couverture complète** du sujet et une **progression pédagogique** cohérente.
+</Aside>
 
-Le Generator crée les cartes selon le plan :
+### Generator Agent ✏️
+
+Le Generator **crée les cartes** selon le plan établi. Il utilise les chunks comme source de vérité et respecte le format de chaque type :
 
 <Tabs>
   <TabItem label="Flashcard">
@@ -246,30 +294,38 @@ Le Generator crée les cartes selon le plan :
   </TabItem>
 </Tabs>
 
-### Critic Agent
+### Critic Agent 🔍
 
-Le Critic évalue chaque carte selon plusieurs critères :
+Le Critic est le **contrôle qualité** du système. Pour chaque carte générée, il évalue :
 
 ```python
 class CardQualityScore(BaseModel):
-    """Score de qualité d'une carte"""
-    clarity: float         # Clarté de la question (0-1)
-    relevance: float       # Pertinence pédagogique (0-1)
-    difficulty_fit: float  # Adéquation difficulté (0-1)
-    uniqueness: float      # Originalité vs doublons (0-1)
-    overall: float         # Score global (0-10)
-    suggestions: List[str] # Suggestions d'amélioration
+    """Score de qualité calculé par le Critic.
+    
+    Chaque dimension est évaluée de 0 à 1, puis combinée
+    en un score global sur 10.
+    """
+    clarity: float         # La question est-elle claire et compréhensible ?
+    relevance: float       # La carte teste-t-elle bien le contenu source ?
+    difficulty_fit: float  # Le niveau correspond-il à celui demandé ?
+    uniqueness: float      # La carte est-elle différente des autres ?
+    overall: float         # Score final = moyenne pondérée (0-10)
+    suggestions: List[str] # Conseils précis pour améliorer la carte
 ```
 
-**Seuils de qualité :**
+<Aside type="caution" title="Les seuils de qualité">
+  Ces seuils ont été calibrés empiriquement pour équilibrer qualité et performance :
+</Aside>
 
-| Critère | Seuil |
-|---------|-------|
-| Score minimum pour approbation | **7.5/10** |
-| Seuil de similarité (doublons) | **75%** |
-| Max tentatives de raffinement | **2** |
+| Critère | Seuil | Explication |
+|---------|-------|-------------|
+| Score minimum | **7.5/10** | En dessous, la carte part au Refiner |
+| Similarité max | **75%** | Au-delà, considéré comme doublon |
+| Tentatives max | **2** | Après 2 échecs, la carte est rejetée |
 
-### Refiner Agent
+### Refiner Agent 🔧
+
+Le Refiner **améliore les cartes** qui n'ont pas atteint le score minimum. Il reçoit la carte originale + les suggestions du Critic :
 
 Le Refiner améliore les cartes selon le feedback du Critic :
 

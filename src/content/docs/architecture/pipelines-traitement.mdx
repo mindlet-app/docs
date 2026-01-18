@@ -12,9 +12,23 @@ import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs } from '@astrojs/sta
 <Badge text="Multimodal" variant="success" />
 <Badge text="Mistral AI" variant="note" />
 
-Mindlet AI dispose de **6 pipelines spécialisés** pour traiter différents types de contenus. Chaque pipeline est optimisé pour extraire le maximum d'information de sa source.
+## Introduction
+
+Les **pipelines de traitement** sont le premier maillon de la chaîne de transformation du contenu. Leur rôle est d'extraire du texte exploitable à partir de n'importe quelle source — que ce soit un PDF scanné, une image, un podcast audio, une vidéo YouTube ou une page web.
+
+<Aside type="tip" title="Pourquoi des pipelines spécialisés ?">
+  Chaque type de contenu présente des défis uniques :
+  - Un **PDF** peut être natif (texte sélectionnable) ou scanné (nécessite OCR)
+  - Une **image** ne contient pas de texte : il faut la décrire avec une IA vision
+  - Un **audio** doit être transcrit en respectant les limites de durée de l'API
+  - Une **vidéo YouTube** peut avoir ou non une transcription disponible
+  
+  Nos pipelines gèrent automatiquement ces cas de figure.
+</Aside>
 
 ## Vue d'ensemble des pipelines
+
+Le diagramme ci-dessous montre comment l'**input router** dirige chaque ressource vers son pipeline spécialisé, puis comment tous les contenus extraits convergent vers le **traitement commun** (chunking + embedding) :
 
 ```mermaid
 flowchart TB
@@ -56,11 +70,21 @@ flowchart TB
     DETECT --> SPLIT --> CHUNK --> ENRICH --> EMBED
 ```
 
+### Comprendre le flux
+
+1. **Input Router** : Analyse l'input et détermine son type (extension de fichier, URL pattern...)
+2. **Pipeline spécialisé** : Extrait le contenu textuel selon les spécificités du format
+3. **Traitement commun** : Découpe le texte en chunks optimaux et génère les embeddings
+
 ---
 
 ## Pipeline Texte
 
-Le pipeline le plus simple, pour le traitement de texte brut.
+Le pipeline le plus simple, pour le traitement de texte brut. C'est aussi le **pipeline de base** vers lequel tous les autres convergent après avoir extrait leur contenu.
+
+<Aside type="note">
+  Ce pipeline est utilisé directement quand l'utilisateur colle du texte, mais il est aussi appelé indirectement par tous les autres pipelines une fois qu'ils ont extrait le contenu de leur source (PDF converti en texte, audio transcrit, etc.).
+</Aside>
 
 ```mermaid
 graph LR
@@ -78,31 +102,53 @@ graph LR
     style H fill:#bfb6fc
 ```
 
-### Nodes du Pipeline Texte
+### Rôle de chaque node
 
-| Node | Responsabilité |
-|------|----------------|
-| `text_input_check` | Valide le texte d'entrée |
-| `detect_complex_content` | Détecte tables, code, formules |
-| `splitter_selection` | Choisit le splitter approprié |
-| `splitter_application` | Applique le chunking |
-| `chunk_enrichment` | Enrichit les chunks complexes via LLM |
-| `embedding_generation` | Génère les embeddings Mistral |
+| Node | Responsabilité | Explication |
+|------|----------------|-------------|
+| `text_input_check` | Valide le texte d'entrée | Vérifie que le texte n'est pas vide et respecte les limites |
+| `detect_complex_content` | Détecte tables, code, formules | Analyse les patterns pour identifier le contenu structuré |
+| `splitter_selection` | Choisit le splitter approprié | Sélectionne `MarkdownSplitter`, `CodeSplitter` ou `RecursiveSplitter` |
+| `splitter_application` | Applique le chunking | Découpe en segments de 512 tokens avec 15% de chevauchement |
+| `chunk_enrichment` | Enrichit les chunks complexes via LLM | Ajoute du contexte aux chunks contenant du code ou des formules |
+| `embedding_generation` | Génère les embeddings Mistral | Convertit chaque chunk en vecteur de 1024 dimensions |
 
 ### Détection de contenu complexe
 
-Le module `ContentComplexityDetector` analyse le texte pour identifier :
+Le module `ContentComplexityDetector` analyse le texte pour identifier les éléments qui nécessitent un traitement spécial :
 
-- **Tables** : Structures tabulaires (Markdown, HTML)
-- **Code** : Blocs de code avec indentation ou syntaxe
-- **Formules** : Équations mathématiques (LaTeX, MathML)
-- **Listes structurées** : Listes à plusieurs niveaux
+```python
+class ContentComplexityDetector:
+    """Détecte le contenu qui nécessite un traitement particulier.
+    
+    Pourquoi ? Un tableau ou une formule mathématique perdent leur sens
+    si on les coupe au milieu lors du chunking. Cette détection permet
+    d'adapter la stratégie de découpage.
+    """
+    
+    def detect(self, text: str) -> ComplexityResult:
+        return ComplexityResult(
+            has_tables=self._detect_tables(text),      # Markdown/HTML tables
+            has_code=self._detect_code(text),          # Blocs de code indentés
+            has_formulas=self._detect_formulas(text),  # LaTeX/MathML
+            has_lists=self._detect_structured_lists(text)  # Listes hiérarchiques
+        )
+```
 
 ---
 
 ## Pipeline PDF
 
-Pipeline sophistiqué avec analyse de pages et stratégie de traitement adaptative.
+Le pipeline PDF est le plus **sophistiqué** de tous car les PDFs présentent une grande variabilité : certains contiennent du texte sélectionnable, d'autres sont des images scannées, et beaucoup sont un mélange des deux.
+
+<Aside type="tip" title="Comment le système choisit-il la stratégie ?">
+  Le `pdf_page_analyzer` examine chaque page pour déterminer :
+  - Si elle contient du texte extractible (ratio texte/image)
+  - Si elle contient des éléments complexes (tableaux, graphiques)
+  - La qualité du texte extrait (caractères illisibles, espaces anormaux)
+  
+  Selon ces métriques, il choisit automatiquement entre parsing texte, OCR ou mode hybride.
+</Aside>
 
 ```mermaid
 graph TB
@@ -137,10 +183,15 @@ graph TB
 
 ### Stratégies de traitement PDF
 
+Le système sélectionne automatiquement la meilleure stratégie selon l'analyse de chaque page :
+
 ```python
 class ProcessingStrategy(str, Enum):
-    """Stratégies de traitement PDF"""
-    PARSE_ONLY = "parse_only"           # Extraction textuelle uniquement
+    """Stratégies de traitement PDF.
+    
+    Le choix est automatique basé sur l'analyse de chaque page.
+    """
+    PARSE_ONLY = "parse_only"           # PDF natif avec texte sélectionnable
     OCR_ONLY = "ocr_only"               # OCR uniquement (scans)
     HYBRID = "hybrid"                   # Parsing + OCR selon les pages
     SPLIT_THEN_PARSE = "split_then_parse"
