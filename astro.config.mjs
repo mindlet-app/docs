@@ -60,6 +60,7 @@ export default defineConfig({
         {
           label: "📋 Projet",
           items: [
+            { label: "Cahier des charges", slug: "projet/cahier-des-charges" },
             { label: "Équipe et organisation", slug: "projet/equipe" },
             { label: "Sécurité et RGPD", slug: "projet/securite" },
             { label: "Tests et qualité", slug: "projet/tests" },
