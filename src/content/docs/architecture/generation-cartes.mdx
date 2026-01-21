@@ -1,6 +1,6 @@
 ---
-title: Génération de cartes
-description: Architecture agentic du Card Generator Graph pour la création de cartes d'apprentissage
+title: Génération de cartes - Pipeline complet
+description: Pipeline de génération de cartes de bout en bout, du frontend mobile au service IA
 sidebar:
   order: 7
 ---
@@ -8,13 +8,546 @@ sidebar:
 import { Aside, Badge, Card, CardGrid, Steps, TabItem, Tabs, FileTree } from '@astrojs/starlight/components';
 import MermaidDownload from '../../../components/MermaidDownload.astro';
 
-# 🎴 Génération de cartes
+# 🎴 Génération de cartes - Pipeline complet
 
-<Badge text="Agentic" variant="success" />
-<Badge text="Mistral AI" variant="note" />
-<Badge text="Multi-types" variant="caution" />
+<Badge text="Frontend" variant="success" />
+<Badge text="Backend" variant="note" />
+<Badge text="Service IA" variant="caution" />
+<Badge text="WebSocket" variant="tip" />
 
-## Introduction
+## Vue d'ensemble du pipeline
+
+Cette section présente le **flux complet** de génération de cartes, depuis l'action utilisateur sur l'application mobile jusqu'à la création des cartes par le service d'intelligence artificielle. Ce pipeline illustre l'interaction entre les trois composants principaux de l'architecture Mindlet.
+
+<MermaidDownload title="Pipeline de génération de cartes">
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as 📱 Utilisateur
+    participant M as React Native
+    participant A as Laravel API
+    participant Q as Redis Queue
+    participant IA as LangGraph
+    participant DB as PostgreSQL
+    participant WS as WebSocket
+
+    U->>M: Upload document + paramètres
+    M->>A: POST /v1/cards/generate
+    A->>A: Valider quota & input
+    A->>Q: Dispatch GenerateCardsJob
+    A-->>M: 202 Accepted {generation_id}
+    M->>M: Afficher "En cours..."
+
+    Q->>A: Job démarre
+    A->>WS: CardGenerationStarted
+    WS-->>M: Event started
+    M->>M: Mise à jour UI
+
+    A->>IA: POST /runs/wait (chunks, params)
+    Note over IA: Planner → Generator → Critic → Refiner → Finalizer
+    IA-->>A: {cards, metadata}
+
+    A->>WS: CardsGenerated
+    WS-->>M: Event generated
+
+    A->>DB: INSERT cards, collection
+    A->>WS: CardsPersisted
+    WS-->>M: Event persisted
+
+    A->>A: Consommer quota
+    A->>WS: CardGenerationCompleted
+    WS-->>M: Event completed
+    M->>M: Notification + refresh liste
+
+    U->>M: Voir les cartes générées
+```
+</MermaidDownload>
+
+<Aside type="note" title="Communication asynchrone">
+  La génération de cartes est un processus **asynchrone**. L'utilisateur reçoit immédiatement un accusé de réception (HTTP 202) puis est notifié en temps réel via WebSocket à chaque étape du processus.
+</Aside>
+
+---
+
+## Étape 1 : Frontend Mobile
+
+### Initiation de la requête
+
+L'utilisateur peut générer des cartes de deux manières :
+1. **Depuis un prompt texte** : description du sujet souhaité
+2. **Depuis des ressources** : documents PDF, images, audio préalablement uploadés
+
+```typescript
+// src/features/ai/mutations.ts
+
+/**
+ * Mutation pour déclencher la génération de cartes.
+ *
+ * Gère :
+ * - L'envoi des paramètres au backend
+ * - La mise à jour du store de génération
+ * - L'invalidation du cache après complétion
+ */
+export const useAiCardGeneration = () => {
+  const setGenerationStarted = useAiGenerationStore((s) => s.setGenerationStarted)
+
+  return apiClient.useMutation(
+    'post',
+    '/v1/cards/generate',
+    {
+      onSuccess: (data) => {
+        // Initialiser le tracking côté frontend
+        setGenerationStarted(data.generation_id, data.collection_id)
+
+        Toast.show({
+          type: 'info',
+          text1: 'Génération en cours',
+          text2: 'Vous serez notifié quand les cartes seront prêtes',
+        })
+      },
+      onError: (error) => {
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: getErrorMessage(error),
+        })
+      },
+    }
+  )
+}
+```
+
+### État global de la génération
+
+Le store Zustand `aiGeneration` maintient l'état de la génération côté client :
+
+```typescript
+// src/stores/aiGeneration.ts
+
+interface AiGenerationState {
+  isGenerating: boolean
+  generationId: string | null
+  collectionId: string | null
+  error: string | null
+  shouldScrollToTop: boolean
+
+  setGenerationStarted: (generationId: string, collectionId?: string) => void
+  setGenerationCompleted: (generationId: string) => void
+  setGenerationFailed: (generationId: string, reason?: string) => void
+  reset: () => void
+}
+
+export const useAiGenerationStore = create<AiGenerationState>((set) => ({
+  isGenerating: false,
+  generationId: null,
+  collectionId: null,
+  error: null,
+  shouldScrollToTop: false,
+
+  setGenerationStarted: (generationId, collectionId) => {
+    set({
+      isGenerating: true,
+      generationId,
+      collectionId: collectionId ?? null,
+      error: null,
+    })
+  },
+
+  setGenerationCompleted: (generationId) => {
+    set({
+      isGenerating: false,
+      shouldScrollToTop: true, // Auto-scroll vers les nouvelles cartes
+    })
+  },
+
+  setGenerationFailed: (generationId, reason) => {
+    set({
+      isGenerating: false,
+      error: reason ?? 'Une erreur est survenue',
+    })
+  },
+}))
+```
+
+### Écoute des événements WebSocket
+
+Le composant `AiWebSocketListener` reçoit les événements broadcast par le backend :
+
+```tsx
+// src/components/providers/AiWebSocketListener.tsx
+
+export function AiWebSocketListener() {
+  const echo = useEchoStore((s) => s.echo)
+  const userId = useAuthStore((s) => s.user?.id)
+  const store = useAiGenerationStore()
+
+  useEffect(() => {
+    if (!echo || !userId) return
+
+    const channel = echo.private(`users.${userId}`)
+
+    // 6 événements possibles
+    channel.listen('.card.generation.started', (e) => {
+      store.setGenerationStarted(e.generation_id, e.collection_id)
+    })
+
+    channel.listen('.card.generation.generated', (e) => {
+      // Cartes générées par l'IA, en cours de persistance
+    })
+
+    channel.listen('.card.generation.collection_created', (e) => {
+      // Nouvelle collection créée pour les cartes
+    })
+
+    channel.listen('.card.generation.cards_persisted', (e) => {
+      // Cartes sauvegardées en base
+    })
+
+    channel.listen('.card.generation.completed', (e) => {
+      store.setGenerationCompleted(e.generation_id)
+
+      // Invalider le cache pour afficher les nouvelles cartes
+      queryClient.invalidateQueries({
+        queryKey: collectionsQueryKeys.list(),
+      })
+
+      // Notification push locale
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Cartes générées !',
+          body: `${e.total_cards_persisted} cartes créées avec succès`,
+        },
+        trigger: null,
+      })
+    })
+
+    channel.listen('.card.generation.failed', (e) => {
+      store.setGenerationFailed(e.generation_id, e.reason)
+    })
+
+    return () => {
+      channel.stopListening('.card.generation.started')
+      channel.stopListening('.card.generation.completed')
+      channel.stopListening('.card.generation.failed')
+    }
+  }, [echo, userId])
+
+  return null
+}
+```
+
+---
+
+## Étape 2 : Backend Laravel
+
+### Validation et dispatch
+
+Le contrôleur reçoit la requête, valide les données et dispatch un job asynchrone :
+
+```php
+// app/Http/Controllers/CardGeneration/GenerateCardsController.php
+
+class GenerateCardsController extends Controller
+{
+    public function __invoke(
+        GenerateCardsRequest $request,
+        CardGenerationService $service
+    ): JsonResponse {
+        // La Form Request valide et convertit en DTO
+        $input = $request->toDto();
+
+        // Le service vérifie le quota et dispatch le job
+        $result = $service->dispatchGeneration(
+            user: $request->user(),
+            input: $input
+        );
+
+        // Réponse immédiate (le traitement continue en arrière-plan)
+        return response()->json([
+            'generation_id' => $result->generationId,
+            'status' => $result->status->value,
+            'total_cards_requested' => $result->totalCardsRequested,
+        ], 202); // HTTP 202 Accepted
+    }
+}
+```
+
+### Service d'orchestration
+
+```php
+// app/Services/CardGeneration/CardGenerationService.php
+
+class CardGenerationService
+{
+    public function __construct(
+        private readonly QuotaService $quotaService,
+        private readonly GenerationHistoryService $history,
+    ) {}
+
+    public function dispatchGeneration(
+        User $user,
+        CardGenerationInput $input
+    ): CardGenerationDispatchResult {
+        // 1. Vérifier que l'utilisateur a du quota
+        $this->quotaService->guardCanGenerate(
+            $user,
+            $input->getTotalCardsRequested()
+        );
+
+        // 2. Enregistrer la demande dans l'historique
+        $generation = $this->history->recordRequest($user, $input);
+
+        // 3. Dispatcher le job vers la queue Redis
+        GenerateCardsJob::dispatch(
+            $user->id,
+            $generation->generation_id,
+            $input
+        )->onQueue('ai'); // Queue dédiée aux jobs IA
+
+        return new CardGenerationDispatchResult(
+            generationId: $generation->generation_id,
+            status: CardGenerationStatus::QUEUED,
+            totalCardsRequested: $input->getTotalCardsRequested(),
+        );
+    }
+}
+```
+
+### Job de génération
+
+Le job s'exécute en arrière-plan et orchestre tout le processus :
+
+```php
+// app/Jobs/CardGeneration/GenerateCardsJob.php
+
+class GenerateCardsJob implements ShouldQueue
+{
+    public int $tries = 5;
+    public int $timeout = 600; // 10 minutes max
+    public string $queue = 'ai';
+
+    public function handle(
+        CardGenerationService $service,
+        CardPersistenceService $persistence,
+        QuotaService $quota,
+    ): void {
+        $user = User::findOrFail($this->userId);
+
+        // 1. Notifier le début du traitement
+        event(new CardGenerationStarted(
+            $this->userId,
+            $this->generationId,
+            $this->input->getTotalCardsRequested()
+        ));
+
+        // 2. Attendre le batch d'embeddings si nécessaire
+        if ($this->input->batchId) {
+            $this->waitForBatchReady($this->input->batchId);
+        }
+
+        // 3. Appeler le service IA LangGraph
+        $result = $service->generate($user, $this->input);
+
+        event(new CardsGenerated(
+            $this->userId,
+            $this->generationId,
+            $result->stats->cardsGenerated
+        ));
+
+        // 4. Persister les cartes en base
+        $persistenceResult = $persistence->persist($user, $result, $this->input);
+
+        if ($persistenceResult->collectionCreated) {
+            event(new CollectionCreated(
+                $this->userId,
+                $this->generationId,
+                $persistenceResult->collectionId,
+                $persistenceResult->collectionTitle
+            ));
+        }
+
+        event(new CardsPersisted(
+            $this->userId,
+            $this->generationId,
+            $persistenceResult->collectionId,
+            $persistenceResult->cardsPersisted
+        ));
+
+        // 5. Consommer le quota APRÈS la persistance réussie
+        $quota->consumeQuota($user, $result->stats->cardsGenerated);
+
+        // 6. Notifier la complétion
+        event(new CardGenerationCompleted(
+            $this->userId,
+            $this->generationId,
+            $persistenceResult->collectionId,
+            $result->stats->cardsGenerated,
+            $persistenceResult->cardsPersisted
+        ));
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        event(new CardGenerationFailed(
+            $this->userId,
+            $this->generationId,
+            $exception->getMessage(),
+            $this->input->batchId
+        ));
+    }
+}
+```
+
+### Communication avec LangGraph
+
+```php
+// app/Services/LangGraph/LangGraphCardService.php
+
+class LangGraphCardService
+{
+    public function generate(array $input): array
+    {
+        // Construction du payload pour LangGraph
+        $payload = [
+            'assistant_id' => config('langgraph.assistants.card_generator'),
+            'input' => [
+                'prompt' => $input['prompt'] ?? null,
+                'language' => $input['language'],
+                'user_context' => $input['user_context'] ?? null,
+                'card_types' => $input['card_types'],
+                'difficulty' => $input['difficulty'] ?? 'intermediate',
+                'embedded_chunks' => $input['embedded_chunks'] ?? [],
+            ],
+        ];
+
+        // Appel synchrone avec attente (jusqu'à 5 minutes)
+        $response = $this->client->runWait($payload);
+
+        return [
+            'generated_cards' => $response['generated_cards'] ?? [],
+            'collection_metadata' => $response['collection_metadata'] ?? null,
+            'quality_scores' => $response['quality_scores'] ?? [],
+        ];
+    }
+}
+```
+
+---
+
+## Étape 3 : Service IA (LangGraph)
+
+Une fois le backend connecté au service IA, le **Card Generator Graph** prend le relais. Voir les sections suivantes pour le détail de l'architecture agentic.
+
+<MermaidDownload title="Résumé du flux IA">
+```mermaid
+flowchart LR
+    subgraph "Backend Laravel"
+        JOB["GenerateCardsJob"]
+    end
+
+    subgraph "Service IA"
+        VAL["Validate Inputs"]
+        SEL["Select Chunks"]
+        PLAN["Planner"]
+        GEN["Generator"]
+        CRIT["Critic"]
+        REF["Refiner"]
+        FIN["Finalizer"]
+    end
+
+    JOB -->|HTTP POST| VAL
+    VAL --> SEL --> PLAN --> GEN --> CRIT
+    CRIT -->|Score < 7.5| REF --> GEN
+    CRIT -->|Score >= 7.5| FIN
+    FIN -->|Response JSON| JOB
+
+    style JOB fill:#1565c0,stroke:#1976d2
+    style PLAN fill:#e65100,stroke:#f57c00
+    style CRIT fill:#ad1457,stroke:#c2185b
+```
+</MermaidDownload>
+
+---
+
+## Diagramme d'architecture complet
+
+<MermaidDownload title="Architecture complète - Génération de cartes">
+```mermaid
+flowchart TB
+    subgraph "Frontend Mobile"
+        UI["📱 Interface utilisateur"]
+        STORE["Zustand Store"]
+        RQ["React Query Cache"]
+        WS_CLIENT["WebSocket Client"]
+    end
+
+    subgraph "Backend Laravel"
+        CTRL["Controller"]
+        SVC["CardGenerationService"]
+        JOB["GenerateCardsJob"]
+        PERSIST["CardPersistenceService"]
+        QUOTA["QuotaService"]
+        EVENTS["Event Broadcaster"]
+    end
+
+    subgraph "Infrastructure"
+        REDIS["Redis Queue"]
+        PG[("PostgreSQL")]
+        REVERB["Laravel Reverb"]
+    end
+
+    subgraph "Service IA"
+        LANGGRAPH["LangGraph Cloud"]
+        AGENTS["Planner → Generator → Critic → Refiner"]
+        MISTRAL["Mistral AI"]
+    end
+
+    UI -->|1. POST /generate| CTRL
+    CTRL --> SVC
+    SVC -->|2. Dispatch| REDIS
+    REDIS -->|3. Process| JOB
+    JOB -->|4. Call| LANGGRAPH
+    LANGGRAPH --> AGENTS
+    AGENTS --> MISTRAL
+    MISTRAL -->|5. Response| AGENTS
+    AGENTS -->|6. Cards JSON| JOB
+    JOB -->|7. Save| PERSIST --> PG
+    JOB --> QUOTA
+    JOB -->|8. Broadcast| EVENTS --> REVERB
+    REVERB -->|9. WebSocket| WS_CLIENT
+    WS_CLIENT --> STORE
+    STORE --> UI
+    UI -->|10. Refresh| RQ
+
+    style UI fill:#2e7d32,stroke:#388e3c
+    style LANGGRAPH fill:#e65100,stroke:#f57c00
+    style PG fill:#1565c0,stroke:#1976d2
+    style REVERB fill:#7b1fa2,stroke:#9c27b0
+```
+</MermaidDownload>
+
+---
+
+## Événements WebSocket
+
+Le backend broadcast **6 événements** distincts pendant le processus de génération :
+
+| Événement | Moment | Payload |
+|-----------|--------|---------|
+| `card.generation.started` | Job démarre | `generation_id`, `total_cards_requested` |
+| `card.generation.generated` | IA termine | `generation_id`, `cards_generated` |
+| `card.generation.collection_created` | Nouvelle collection | `collection_id`, `title` |
+| `card.generation.cards_persisted` | Cartes en DB | `collection_id`, `cards_persisted` |
+| `card.generation.completed` | Succès final | `collection_id`, `total_*` |
+| `card.generation.failed` | Erreur | `reason`, `batch_id` |
+
+<Aside type="tip" title="Pourquoi autant d'événements ?">
+  Ces événements granulaires permettent au frontend d'afficher une **progression détaillée** à l'utilisateur. Chaque étape peut prendre plusieurs secondes, et informer l'utilisateur réduit l'impression d'attente.
+</Aside>
+
+---
+
+## Introduction à l'architecture agentic
 
 Le **Card Generator Graph** est le composant le plus **complexe et innovant** du système. Contrairement à un simple appel LLM qui génère des cartes en une seule passe, nous utilisons une architecture **agentic** — c'est-à-dire un système où plusieurs agents IA collaborent et s'auto-corrigent.
 
@@ -46,11 +579,11 @@ flowchart LR
     C -->|"Score ≥ 7.5"| E["✅ Finalizer"]
     D -->|"Max tentatives"| E
     
-    style A fill:#e3f2fd,stroke:#1976d2
-    style B fill:#fff3e0,stroke:#f57c00
-    style C fill:#fce4ec,stroke:#c2185b
-    style D fill:#e8f5e9,stroke:#388e3c
-    style E fill:#e0f7fa,stroke:#0097a7
+    style A fill:#1565c0,stroke:#1976d2
+    style B fill:#e65100,stroke:#f57c00
+    style C fill:#ad1457,stroke:#c2185b
+    style D fill:#2e7d32,stroke:#388e3c
+    style E fill:#00838f,stroke:#0097a7
 ```
 </MermaidDownload>
 
@@ -84,9 +617,9 @@ graph TD;
     refiner -.-> generator;
     finalizer --> __end__;
     
-    classDef default fill:#f2f0ff,line-height:1.2
+    classDef default fill:#5e35b1,line-height:1.2
     classDef first fill-opacity:0
-    classDef last fill:#bfb6fc
+    classDef last fill:#7c4dff
 ```
 </MermaidDownload>
 
@@ -125,14 +658,14 @@ flowchart TB
     REFINER -->|"Cartes améliorées"| COLLECTION
     COLLECTION --> FINALIZER
     
-    style AGENT fill:#f5f5f5,stroke:#333,stroke-width:2px
-    style PLANNER fill:#e3f2fd,stroke:#1976d2
-    style GENERATOR fill:#fff3e0,stroke:#f57c00
-    style CRITIC fill:#fce4ec,stroke:#c2185b
-    style REFINER fill:#e8f5e9,stroke:#388e3c
-    style COLLECTION fill:#f3e5f5,stroke:#7b1fa2
-    style FINALIZER fill:#e0f7fa,stroke:#0097a7
-    style LOOP fill:#fafafa,stroke:#9e9e9e,stroke-dasharray: 5 5
+    style AGENT fill:#424242,stroke:#616161,stroke-width:2px
+    style PLANNER fill:#1565c0,stroke:#1976d2
+    style GENERATOR fill:#e65100,stroke:#f57c00
+    style CRITIC fill:#ad1457,stroke:#c2185b
+    style REFINER fill:#2e7d32,stroke:#388e3c
+    style COLLECTION fill:#7b1fa2,stroke:#9c27b0
+    style FINALIZER fill:#00838f,stroke:#0097a7
+    style LOOP fill:#37474f,stroke:#78909c,stroke-dasharray: 5 5
 ```
 </MermaidDownload>
 
@@ -357,8 +890,8 @@ graph LR
     F --> G[Re-évaluation]
     E -->|Non| H[Rejetée]
     
-    style C fill:#c8e6c9
-    style H fill:#ffcdd2
+    style C fill:#388e3c
+    style H fill:#c62828
 ```
 </MermaidDownload>
 

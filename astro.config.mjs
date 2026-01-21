@@ -9,8 +9,8 @@ import starlightImageZoomPlugin from "starlight-image-zoom";
 export default defineConfig({
   integrations: [
     mermaid({
-      theme: "forest",
-      autoTheme: true,
+      theme: "dark",
+      autoTheme: false,
     }),
     starlight({
       title: "Mindlet - Documentation",

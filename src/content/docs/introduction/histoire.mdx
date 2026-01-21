@@ -6,6 +6,7 @@ sidebar:
 ---
 
 import { Aside, Badge, Steps } from '@astrojs/starlight/components';
+import MermaidDownload from '../../../components/MermaidDownload.astro';
 
 # 📖 Notre histoire
 
@@ -30,7 +31,44 @@ Notre première architecture était entièrement **open source** et indépendant
 | **Base vectorielle** | ChromaDB |
 | **Stockage objets** | MinIO |
 
-![Architecture initiale](../../../assets/diagrammes/first-architecture.png)
+<MermaidDownload title="Architecture initiale">
+```mermaid
+flowchart LR
+    subgraph Frontend
+        WEB[Next.js]
+        MOB[React Native]
+        DESK[Electron]
+    end
+    subgraph Backend
+        NGINX[Serveur Nginx]
+        subgraph API[REST API]
+            FAST[FastAPI]
+
+            LLM[Modèle LLM Mistral]
+            EMB[Modèle Embedding]
+            OCR["Modèle OCR (vision)"]
+            MINIO[Stockage de fichier avec MinIO]
+
+            FAST -.-> LLM
+            FAST -.-> EMB
+            FAST -.-> OCR
+            FAST -.-> MINIO
+        end
+        subgraph DB[SGBD]
+            PG[(POSTGRES)]
+            CH[(CHROMA)]
+            PG <-->|Les données sont liées| CH
+        end
+    end
+    WEB --> NGINX
+    MOB --> NGINX
+    DESK --> NGINX
+
+    NGINX --> FAST
+    FAST --> PG
+    FAST --> CH
+```
+</MermaidDownload>
 
 ## 🔄 La migration vers l'hybride
 
