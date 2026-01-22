@@ -1202,6 +1202,7 @@ erDiagram
     USERS ||--o{ COLLECTIONS : owns
     USERS ||--o{ AI_CARD_GENERATIONS : requests
     USERS ||--|| USER_AI_QUOTAS : has
+    USERS ||--o{ AI_RESOURCE_BATCHES : submits
 
     COLLECTIONS ||--o{ CARDS : contains
     COLLECTIONS ||--o{ COLLECTION_COLLABORATORS : has
